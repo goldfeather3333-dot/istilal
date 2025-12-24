@@ -1,0 +1,321 @@
+import React, { useState, useMemo } from 'react';
+import { DashboardLayout } from '@/components/DashboardLayout';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useDocuments, Document } from '@/hooks/useDocuments';
+import { useAuth } from '@/contexts/AuthContext';
+import { StatusBadge } from '@/components/StatusBadge';
+import { DocumentSearchFilters, DocumentFilters, filterDocuments } from '@/components/DocumentSearchFilters';
+import { DocumentTagManager } from '@/components/DocumentTagManager';
+import { FileText, Download, Loader2, Star, StarOff, DownloadCloud, Package } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+
+export default function MyDocuments() {
+  const { documents, loading, downloadFile } = useDocuments();
+  const { role } = useAuth();
+  const { toast } = useToast();
+  const isStaffOrAdmin = role === 'staff' || role === 'admin';
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [filters, setFilters] = useState<DocumentFilters>({
+    search: '',
+    status: 'all',
+    dateFrom: undefined,
+    dateTo: undefined
+  });
+
+  const filteredDocuments = useMemo(() => {
+    return filterDocuments(documents, filters);
+  }, [documents, filters]);
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString(),
+      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+  };
+
+  const toggleFavorite = async (doc: Document) => {
+    const newValue = !doc.is_favorite;
+    await supabase
+      .from('documents')
+      .update({ is_favorite: newValue })
+      .eq('id', doc.id);
+    
+    toast({
+      title: newValue ? 'Added to favorites' : 'Removed from favorites',
+      description: doc.file_name,
+    });
+  };
+
+  const toggleSelection = (docId: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(docId)) {
+        newSet.delete(docId);
+      } else {
+        newSet.add(docId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    const completedDocs = filteredDocuments.filter(d => d.status === 'completed');
+    setSelectedIds(new Set(completedDocs.map(d => d.id)));
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkDownload = async () => {
+    const selectedDocs = filteredDocuments.filter(d => selectedIds.has(d.id) && d.status === 'completed');
+    if (selectedDocs.length === 0) {
+      toast({ title: 'No completed documents selected', variant: 'destructive' });
+      return;
+    }
+
+    setBulkDownloading(true);
+    toast({ title: 'Starting downloads...', description: `Downloading ${selectedDocs.length} document(s)` });
+
+    for (let i = 0; i < selectedDocs.length; i++) {
+      const doc = selectedDocs[i];
+      const baseName = doc.file_name.replace(/\.[^/.]+$/, '');
+      
+      // Download similarity report if exists
+      if (doc.similarity_report_path) {
+        await downloadFile(doc.similarity_report_path, 'reports', `${baseName}_similarity.pdf`);
+        await new Promise(r => setTimeout(r, 300));
+      }
+      
+      // Download AI report if exists
+      if (doc.ai_report_path) {
+        await downloadFile(doc.ai_report_path, 'reports', `${baseName}_ai.pdf`);
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
+
+    setBulkDownloading(false);
+    setSelectedIds(new Set());
+    toast({ title: 'Downloads complete!' });
+  };
+
+  const completedCount = filteredDocuments.filter(d => d.status === 'completed').length;
+  const selectedCompletedCount = filteredDocuments.filter(d => selectedIds.has(d.id) && d.status === 'completed').length;
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-display font-bold">My Documents</h1>
+            <p className="text-muted-foreground mt-1">
+              View all your uploaded documents and their status
+            </p>
+          </div>
+          
+          {/* Bulk actions */}
+          {completedCount > 0 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={selectAll}
+                disabled={selectedIds.size === completedCount}
+              >
+                <Package className="h-4 w-4 mr-1" />
+                Select All ({completedCount})
+              </Button>
+              {selectedIds.size > 0 && (
+                <>
+                  <Button variant="ghost" size="sm" onClick={clearSelection}>
+                    Clear
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleBulkDownload}
+                    disabled={bulkDownloading}
+                  >
+                    {bulkDownloading ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <DownloadCloud className="h-4 w-4 mr-1" />
+                    )}
+                    Download Reports ({selectedCompletedCount})
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Search Filters */}
+        <DocumentSearchFilters 
+          filters={filters} 
+          onFiltersChange={setFilters}
+          showStatusFilter={true}
+        />
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : filteredDocuments.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-semibold text-lg mb-2">No documents found</h3>
+              <p className="text-muted-foreground mb-4">
+                {documents.length === 0 ? 'Upload your first document to get started' : 'Try adjusting your filters'}
+              </p>
+              {documents.length === 0 && (
+                <Button asChild>
+                  <a href="/dashboard/upload">Upload Document</a>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={selectedIds.size === completedCount && completedCount > 0}
+                          onCheckedChange={(checked) => checked ? selectAll() : clearSelection()}
+                        />
+                      </TableHead>
+                      <TableHead className="w-10"></TableHead>
+                      <TableHead className="w-12 text-center">#</TableHead>
+                      <TableHead>Document</TableHead>
+                      <TableHead>Tags</TableHead>
+                      <TableHead>Upload Time</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-center">Similarity Report</TableHead>
+                      <TableHead className="text-center">AI Report</TableHead>
+                      <TableHead>Remarks</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDocuments.map((doc, index) => {
+                      const { date, time } = formatDateTime(doc.uploaded_at);
+                      const baseName = doc.file_name.replace(/\.[^/.]+$/, '');
+                      const isSelected = selectedIds.has(doc.id);
+                      const canSelect = doc.status === 'completed';
+
+                      return (
+                        <TableRow key={doc.id} className={isSelected ? 'bg-primary/5' : ''}>
+                          <TableCell>
+                            <Checkbox
+                              checked={isSelected}
+                              disabled={!canSelect}
+                              onCheckedChange={() => toggleSelection(doc.id)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => toggleFavorite(doc)}
+                            >
+                              {doc.is_favorite ? (
+                                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                              ) : (
+                                <StarOff className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+                              <div className="flex flex-col">
+                                <span className="font-medium truncate max-w-[200px]" title={doc.file_name}>
+                                  {doc.file_name}
+                                </span>
+                                {isStaffOrAdmin && (
+                                  <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={doc.customer_profile?.email}>
+                                    {doc.customer_profile?.full_name || doc.customer_profile?.email || (doc.magic_link_id ? 'Guest' : '-')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <DocumentTagManager documentId={doc.id} compact />
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <div>{date}</div>
+                              <div className="text-muted-foreground">{time}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <StatusBadge status={doc.status} />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {doc.similarity_report_path ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => downloadFile(doc.similarity_report_path!, 'reports', `${baseName}_similarity.pdf`)}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {doc.ai_report_path ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => downloadFile(doc.ai_report_path!, 'reports', `${baseName}_ai.pdf`)}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {doc.remarks ? (
+                              <span className="text-sm text-foreground">{doc.remarks}</span>
+                            ) : doc.error_message ? (
+                              <span className="text-sm text-destructive">{doc.error_message}</span>
+                            ) : doc.status === 'pending' ? (
+                              <span className="text-sm text-muted-foreground">In queue</span>
+                            ) : doc.status === 'in_progress' ? (
+                              <span className="text-sm text-muted-foreground">Processing...</span>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}
