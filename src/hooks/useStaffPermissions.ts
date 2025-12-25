@@ -8,6 +8,7 @@ interface StaffPermissions {
   can_add_remarks: boolean;
   can_batch_process: boolean;
   can_release_documents: boolean;
+  bulk_upload: boolean;
 }
 
 const defaultPermissions: StaffPermissions = {
@@ -16,6 +17,7 @@ const defaultPermissions: StaffPermissions = {
   can_add_remarks: true,
   can_batch_process: true,
   can_release_documents: true,
+  bulk_upload: false,
 };
 
 export function useStaffPermissions() {
@@ -33,6 +35,7 @@ export function useStaffPermissions() {
           can_add_remarks: true,
           can_batch_process: true,
           can_release_documents: true,
+          bulk_upload: true,
         });
         setLoading(false);
         return;

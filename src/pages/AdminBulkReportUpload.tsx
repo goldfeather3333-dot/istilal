@@ -8,6 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { 
   Upload, 
   FileText, 
@@ -19,7 +21,8 @@ import {
   Archive,
   Loader2,
   Brain,
-  FileSearch
+  FileSearch,
+  ShieldAlert
 } from 'lucide-react';
 import JSZip from 'jszip';
 
@@ -59,12 +62,44 @@ interface ProcessingResult {
 }
 
 export default function AdminBulkReportUpload() {
+  const { role } = useAuth();
+  const { permissions, loading: permissionsLoading } = useStaffPermissions();
   const [files, setFiles] = useState<ReportFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingResult, setProcessingResult] = useState<ProcessingResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check access - admin always has access, staff needs permission
+  const hasAccess = role === 'admin' || (role === 'staff' && permissions.bulk_upload);
+
+  if (permissionsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <DashboardLayout>
+        <Card className="max-w-lg mx-auto mt-12">
+          <CardContent className="py-12 text-center">
+            <ShieldAlert className="h-16 w-16 mx-auto mb-4 text-destructive" />
+            <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">
+              You don't have permission to access the bulk upload feature.
+              Please contact an administrator.
+            </p>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
