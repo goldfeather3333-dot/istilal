@@ -11,7 +11,7 @@ const Landing = () => {
     {
       icon: FileText,
       title: "Similarity Detection",
-      description: "Documents checked against Turnitin's database of billions of academic papers, websites, and publications",
+      description: "Documents checked against billions of academic papers, websites, and publications from multiple sources",
     },
     {
       icon: Bot,
@@ -115,11 +115,10 @@ const Landing = () => {
             Get detailed similarity and AI detection reports in minutes.
           </p>
 
-          {/* Turnitin Badge */}
+          {/* Trust Badge - Updated */}
           <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-lg border border-gray-200 shadow-sm mb-8">
-            <span className="text-red-600 font-bold text-lg">turnitin</span>
-            <span className="text-red-600">®</span>
-            <span className="text-gray-500 ml-2">Powered Database</span>
+            <Shield className="w-5 h-5 text-blue-700" />
+            <span className="text-gray-700 font-medium">Advanced Plagiarism Detection</span>
           </div>
 
           {/* CTA Button */}
@@ -217,11 +216,55 @@ const Landing = () => {
       </main>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-gray-100 bg-white">
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-gray-600 text-sm">
-            © {new Date().getFullYear()} PlagaiScans. All rights reserved.
-          </p>
+      <footer className="py-12 px-4 border-t border-gray-100 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            {/* Brand */}
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-semibold text-gray-900">PlagaiScans</span>
+              </div>
+              <p className="text-gray-500 text-sm max-w-sm">
+                Professional AI-assisted similarity detection and plagiarism analysis for 
+                students, educators, and businesses worldwide.
+              </p>
+            </div>
+            
+            {/* Legal Links */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/terms-and-conditions" className="text-gray-500 hover:text-blue-700">Terms & Conditions</Link></li>
+                <li><Link to="/privacy-policy" className="text-gray-500 hover:text-blue-700">Privacy Policy</Link></li>
+                <li><Link to="/refund-policy" className="text-gray-500 hover:text-blue-700">Refund Policy</Link></li>
+              </ul>
+            </div>
+            
+            {/* Company Links */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Company</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/about-us" className="text-gray-500 hover:text-blue-700">About Us</Link></li>
+                <li><Link to="/contact" className="text-gray-500 hover:text-blue-700">Contact & Support</Link></li>
+              </ul>
+            </div>
+          </div>
+          
+          {/* Bottom */}
+          <div className="pt-8 border-t border-gray-100 text-center space-y-2">
+            <p className="text-gray-600 text-sm">
+              © {new Date().getFullYear()} Plagaiscans. All rights reserved.
+            </p>
+            <p className="text-gray-500 text-xs">
+              Plagaiscans is operated by Goldfeather Prem Ltd (United Kingdom)
+            </p>
+            <p className="text-gray-500 text-xs">
+              Contact: <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">support@plagaiscans.com</a>
+            </p>
+          </div>
         </div>
       </footer>
 

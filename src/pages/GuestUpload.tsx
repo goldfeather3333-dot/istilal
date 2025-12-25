@@ -718,12 +718,10 @@ export default function GuestUpload() {
 
       {/* Footer */}
       <footer className="border-t border-border bg-card mt-12">
-        <div className="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-          <p>© 2024 PlagaiScans. All rights reserved.</p>
-          <p className="mt-1">
-            Powered by <span className="font-bold text-[#1f4e79]">turnitin</span>
-            <span className="text-[#d9534f]">®</span>
-          </p>
+        <div className="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground space-y-1">
+          <p>© {new Date().getFullYear()} Plagaiscans. All rights reserved.</p>
+          <p>Plagaiscans is operated by Goldfeather Prem Ltd (United Kingdom)</p>
+          <p>Contact: <a href="mailto:support@plagaiscans.com" className="text-primary hover:underline">support@plagaiscans.com</a></p>
         </div>
       </footer>
     </div>
