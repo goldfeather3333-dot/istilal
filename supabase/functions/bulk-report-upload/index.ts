@@ -36,11 +36,11 @@ interface ProcessingResult {
 }
 
 /**
- * Normalize filename for CUSTOMER documents (base name).
- * Just removes the file extension, keeps everything else including brackets.
+ * Get the base name from a customer document filename (just removes extension).
  * Examples:
  *   fileA1.pdf → fileA1
  *   fileA1 (1).pdf → fileA1 (1)
+ *   fileA1 (1).doc → fileA1 (1)
  */
 function getDocumentBaseName(filename: string): string {
   let result = filename.toLowerCase();
@@ -50,29 +50,75 @@ function getDocumentBaseName(filename: string): string {
 }
 
 /**
- * Normalize filename for REPORT files (admin-uploaded).
- * Removes extension AND only the LAST trailing " (number)" suffix.
- * This allows matching to customer documents that may have earlier brackets.
- * 
- * Examples:
- *   fileA1 (1).pdf → fileA1 (report for "fileA1.pdf")
- *   fileA1 (2).pdf → fileA1 (report for "fileA1.pdf")
- *   fileA1 (1) (1).pdf → fileA1 (1) (report for "fileA1 (1).pdf")
- *   fileA1 (1) (2).pdf → fileA1 (1) (report for "fileA1 (1).pdf")
- *   fileA1.pdf → fileA1 (exact match for "fileA1.pdf")
+ * Check if a filename has a PDF extension.
  */
-function normalizeReportFilename(filename: string): string {
+function isPdfFile(filename: string): boolean {
+  return filename.toLowerCase().endsWith('.pdf');
+}
+
+/**
+ * Extract the bracket number from a filename (e.g., "fileA (3)" → 3).
+ * Returns null if no bracket number is found.
+ */
+function extractBracketNumber(baseName: string): number | null {
+  const match = baseName.match(/\s*\((\d+)\)$/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+/**
+ * Get the base name without the trailing bracket number.
+ * Examples:
+ *   fileA1 (1) → fileA1
+ *   fileA1 (2) → fileA1
+ *   fileA1 → fileA1
+ */
+function getBaseWithoutTrailingBracket(baseName: string): string {
+  return baseName.replace(/\s*\(\d+\)$/, '').trim();
+}
+
+/**
+ * Determine expected report patterns for a customer document.
+ * 
+ * UNIVERSAL RULE:
+ * - For NON-PDF files (doc, docx, txt, rtf, etc.) with pattern "fileA (X).ext":
+ *   - Similarity report: "fileA (X).pdf" (exact base name + .pdf)
+ *   - AI report: "fileA (X) (1).pdf" (base name + (1) + .pdf)
+ * 
+ * - For PDF files with pattern "fileA (X).pdf":
+ *   - Similarity report: "fileA (X) (1).pdf"
+ *   - AI report: "fileA (X) (2).pdf"
+ * 
+ * Returns the expected report base names for similarity and AI reports.
+ */
+function getExpectedReportBaseNames(docFileName: string): { similarity: string; ai: string } {
+  const baseName = getDocumentBaseName(docFileName);
+  const isPdf = isPdfFile(docFileName);
+  
+  if (isPdf) {
+    // PDF logic: reports have (1) and (2) appended
+    // fileA (X).pdf → similarity: fileA (X) (1), ai: fileA (X) (2)
+    return {
+      similarity: `${baseName} (1)`,
+      ai: `${baseName} (2)`,
+    };
+  } else {
+    // Non-PDF logic: similarity has same base name, AI has (1) appended
+    // fileA (X).doc → similarity: fileA (X), ai: fileA (X) (1)
+    return {
+      similarity: baseName,
+      ai: `${baseName} (1)`,
+    };
+  }
+}
+
+/**
+ * Get the base name from a report filename (removes extension only).
+ */
+function getReportBaseName(filename: string): string {
   let result = filename.toLowerCase();
   // Remove file extension
   result = result.replace(/\.[^.]+$/, '');
-  // Remove ONLY the last trailing " (number)" suffix - single pass, no global flag
-  result = result.replace(/\s*\(\d+\)$/, '');
   return result.trim();
-}
-
-// Keep for backwards compatibility - used for customer documents
-function normalizeFilename(filename: string): string {
-  return getDocumentBaseName(filename);
 }
 
 serve(async (req: Request) => {
@@ -145,36 +191,19 @@ serve(async (req: Request) => {
 
     console.log(`Found ${documents?.length || 0} pending/in_progress documents`);
 
-    // Group documents by their BASE NAME (just extension removed, keeps brackets)
-    // This is the "identity" of the customer document
-    const docsByBaseName = new Map<string, typeof documents>();
-    for (const doc of documents || []) {
-      // Use the stored normalized_filename or compute base name
-      const baseName = doc.normalized_filename || getDocumentBaseName(doc.file_name);
-      
-      if (!docsByBaseName.has(baseName)) {
-        docsByBaseName.set(baseName, []);
-      }
-      docsByBaseName.get(baseName)!.push(doc);
-    }
-
-    console.log(`Document base names:`, Array.from(docsByBaseName.keys()));
-
-    // Group reports by their NORMALIZED filename (last trailing suffix removed)
-    // This determines which customer document base name they match
-    const reportsByNormalized = new Map<string, ReportFile[]>();
+    // Create a map of report base names to report files
+    const reportsByBaseName = new Map<string, ReportFile[]>();
     for (const report of reports) {
-      // Use the advanced normalization that removes only the LAST trailing (number)
-      const normalized = normalizeReportFilename(report.fileName);
-      report.normalizedFilename = normalized;
+      const reportBaseName = getReportBaseName(report.fileName);
+      report.normalizedFilename = reportBaseName;
       
-      if (!reportsByNormalized.has(normalized)) {
-        reportsByNormalized.set(normalized, []);
+      if (!reportsByBaseName.has(reportBaseName)) {
+        reportsByBaseName.set(reportBaseName, []);
       }
-      reportsByNormalized.get(normalized)!.push(report);
+      reportsByBaseName.get(reportBaseName)!.push(report);
     }
 
-    console.log(`Report normalized names:`, Array.from(reportsByNormalized.keys()));
+    console.log(`Report base names:`, Array.from(reportsByBaseName.keys()));
 
     const result: ProcessingResult = {
       success: true,
@@ -191,154 +220,129 @@ serve(async (req: Request) => {
       },
     };
 
-    // Process each group of reports
-    for (const [normalized, matchingReports] of reportsByNormalized) {
-      // Look up documents by the normalized report name (which should match document base name)
-      const matchingDocs = docsByBaseName.get(normalized) || [];
+    // Track which reports have been matched
+    const matchedReportPaths = new Set<string>();
 
-      console.log(`Processing normalized filename "${normalized}": ${matchingReports.length} reports, ${matchingDocs.length} matching documents`);
-
-      // Case 1: No matching documents - unmatched reports
-      if (matchingDocs.length === 0) {
-        for (const report of matchingReports) {
-          result.unmatched.push(report);
-          
-          // Store in unmatched_reports table
-          await supabase.from('unmatched_reports').insert({
-            file_name: report.fileName,
-            normalized_filename: normalized,
-            file_path: report.filePath,
-            uploaded_by: user.id,
-          });
-        }
-        continue;
-      }
-
-      // Case 2: Multiple documents with same normalized filename - ambiguous, mark for review
-      if (matchingDocs.length > 1) {
-        for (const doc of matchingDocs) {
-          await supabase
-            .from('documents')
-            .update({
-              needs_review: true,
-              review_reason: `Multiple documents share the same normalized filename: ${normalized}`,
-            })
-            .eq('id', doc.id);
-
-          result.needsReview.push({
-            documentId: doc.id,
-            reason: 'Multiple documents with same normalized filename',
-          });
-        }
-        
-        // Add reports to unmatched since we can't determine which document they belong to
-        for (const report of matchingReports) {
-          result.unmatched.push(report);
-          await supabase.from('unmatched_reports').insert({
-            file_name: report.fileName,
-            normalized_filename: normalized,
-            file_path: report.filePath,
-            uploaded_by: user.id,
-          });
-        }
-        continue;
-      }
-
-      // Case 3: Exactly one matching document - proceed with mapping
-      const doc = matchingDocs[0];
+    // Process each document and try to find matching reports
+    for (const doc of documents || []) {
+      const docBaseName = getDocumentBaseName(doc.file_name);
+      const expected = getExpectedReportBaseNames(doc.file_name);
       
-      // Case 3a: More than 2 reports for one document - needs review
-      if (matchingReports.length > 2) {
+      console.log(`Processing document "${doc.file_name}" (base: ${docBaseName})`);
+      console.log(`  Expected similarity report base: "${expected.similarity}"`);
+      console.log(`  Expected AI report base: "${expected.ai}"`);
+
+      // Find matching similarity report
+      const similarityReports = reportsByBaseName.get(expected.similarity) || [];
+      // Find matching AI report
+      const aiReports = reportsByBaseName.get(expected.ai) || [];
+
+      console.log(`  Found ${similarityReports.length} potential similarity reports, ${aiReports.length} potential AI reports`);
+
+      // Filter out already matched reports
+      const availableSimilarityReports = similarityReports.filter(r => !matchedReportPaths.has(r.filePath));
+      const availableAiReports = aiReports.filter(r => !matchedReportPaths.has(r.filePath));
+
+      // Check for ambiguous matches
+      if (availableSimilarityReports.length > 1 || availableAiReports.length > 1) {
+        console.log(`  Ambiguous match - flagging for review`);
         await supabase
           .from('documents')
           .update({
             needs_review: true,
-            review_reason: `More than 2 reports matched (${matchingReports.length} found)`,
+            review_reason: `Multiple possible report matches found (${availableSimilarityReports.length} similarity, ${availableAiReports.length} AI)`,
           })
           .eq('id', doc.id);
 
         result.needsReview.push({
           documentId: doc.id,
-          reason: `More than 2 reports found (${matchingReports.length})`,
+          reason: `Multiple possible report matches`,
         });
-        
-        // Store excess reports as unmatched
-        for (const report of matchingReports) {
-          result.unmatched.push(report);
-          await supabase.from('unmatched_reports').insert({
-            file_name: report.fileName,
-            normalized_filename: normalized,
-            file_path: report.filePath,
-            uploaded_by: user.id,
-          });
-        }
         continue;
       }
 
-      // Assign reports: first as similarity, second as AI
       let updatedDoc = { ...doc };
-      
-      for (let i = 0; i < matchingReports.length; i++) {
-        const report = matchingReports[i];
-        let reportType: 'similarity' | 'ai';
-        
-        // Determine which slot to fill
-        if (!updatedDoc.similarity_report_path) {
-          reportType = 'similarity';
-          updatedDoc.similarity_report_path = report.filePath;
-        } else if (!updatedDoc.ai_report_path) {
-          reportType = 'ai';
-          updatedDoc.ai_report_path = report.filePath;
-        } else {
-          // Both slots filled - this shouldn't happen but handle it
-          result.unmatched.push(report);
-          await supabase.from('unmatched_reports').insert({
-            file_name: report.fileName,
-            normalized_filename: normalized,
-            file_path: report.filePath,
-            uploaded_by: user.id,
-          });
-          continue;
-        }
+      let hasUpdate = false;
+
+      // Map similarity report
+      if (availableSimilarityReports.length === 1 && !doc.similarity_report_path) {
+        const report = availableSimilarityReports[0];
+        updatedDoc.similarity_report_path = report.filePath;
+        matchedReportPaths.add(report.filePath);
+        hasUpdate = true;
 
         result.mapped.push({
           documentId: doc.id,
           fileName: report.fileName,
-          reportType,
+          reportType: 'similarity',
           success: true,
         });
         result.stats.mappedCount++;
+        console.log(`  Mapped similarity report: ${report.fileName}`);
       }
 
-      // Update the document with new report paths
-      const updateData: Record<string, unknown> = {};
-      
-      if (updatedDoc.similarity_report_path !== doc.similarity_report_path) {
-        updateData.similarity_report_path = updatedDoc.similarity_report_path;
-      }
-      if (updatedDoc.ai_report_path !== doc.ai_report_path) {
-        updateData.ai_report_path = updatedDoc.ai_report_path;
-      }
+      // Map AI report
+      if (availableAiReports.length === 1 && !doc.ai_report_path) {
+        const report = availableAiReports[0];
+        updatedDoc.ai_report_path = report.filePath;
+        matchedReportPaths.add(report.filePath);
+        hasUpdate = true;
 
-      // Check if both reports are now attached - mark as completed
-      if (updatedDoc.similarity_report_path && updatedDoc.ai_report_path) {
-        updateData.status = 'completed';
-        updateData.completed_at = new Date().toISOString();
-        result.completedDocuments.push(doc.id);
-        result.stats.completedCount++;
-
-        console.log(`Document ${doc.id} completed with both reports`);
+        result.mapped.push({
+          documentId: doc.id,
+          fileName: report.fileName,
+          reportType: 'ai',
+          success: true,
+        });
+        result.stats.mappedCount++;
+        console.log(`  Mapped AI report: ${report.fileName}`);
       }
 
-      if (Object.keys(updateData).length > 0) {
-        const { error: updateError } = await supabase
-          .from('documents')
-          .update(updateData)
-          .eq('id', doc.id);
-
-        if (updateError) {
-          console.error(`Error updating document ${doc.id}:`, updateError);
+      // Update the document if we made changes
+      if (hasUpdate) {
+        const updateData: Record<string, unknown> = {};
+        
+        if (updatedDoc.similarity_report_path !== doc.similarity_report_path) {
+          updateData.similarity_report_path = updatedDoc.similarity_report_path;
         }
+        if (updatedDoc.ai_report_path !== doc.ai_report_path) {
+          updateData.ai_report_path = updatedDoc.ai_report_path;
+        }
+
+        // Check if both reports are now attached - mark as completed
+        if (updatedDoc.similarity_report_path && updatedDoc.ai_report_path) {
+          updateData.status = 'completed';
+          updateData.completed_at = new Date().toISOString();
+          result.completedDocuments.push(doc.id);
+          result.stats.completedCount++;
+          console.log(`  Document ${doc.id} completed with both reports`);
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          const { error: updateError } = await supabase
+            .from('documents')
+            .update(updateData)
+            .eq('id', doc.id);
+
+          if (updateError) {
+            console.error(`Error updating document ${doc.id}:`, updateError);
+          }
+        }
+      }
+    }
+
+    // Find all unmatched reports (those not in matchedReportPaths)
+    for (const report of reports) {
+      if (!matchedReportPaths.has(report.filePath)) {
+        result.unmatched.push(report);
+        
+        // Store in unmatched_reports table
+        await supabase.from('unmatched_reports').insert({
+          file_name: report.fileName,
+          normalized_filename: report.normalizedFilename,
+          file_path: report.filePath,
+          uploaded_by: user.id,
+        });
       }
     }
 
