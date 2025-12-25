@@ -15,7 +15,7 @@ interface ReportFile {
 interface ProcessedReport {
   fileName: string;
   filePath: string;
-  documentName: string | null;
+  documentKey: string | null;
   reportType: 'similarity' | 'ai' | 'unknown';
   percentage: number | null;
   matchedDocumentId: string | null;
@@ -26,7 +26,7 @@ interface ProcessingResult {
   success: boolean;
   processed: ProcessedReport[];
   mapped: { documentId: string; fileName: string; reportType: string; percentage: number | null }[];
-  unmatched: { fileName: string; documentName: string | null; reason: string }[];
+  unmatched: { fileName: string; documentKey: string | null; reason: string }[];
   completedDocuments: string[];
   stats: {
     totalReports: number;
@@ -50,6 +50,16 @@ interface DocumentRecord {
   ai_percentage: number | null;
   status: string;
   needs_review: boolean | null;
+}
+
+interface GroupedReports {
+  documentKey: string;
+  matchedDocument: DocumentRecord | null;
+  reports: {
+    fileName: string;
+    filePath: string;
+    pdfData: Uint8Array;
+  }[];
 }
 
 /**
@@ -79,112 +89,130 @@ async function extractTextFromPage(pdfData: Uint8Array, pageNumber: number): Pro
 }
 
 /**
- * Extract document name from page 1 text.
- * Returns the document name in format "fileA (X)" for matching.
+ * STAGE 1: Extract document key from report filename.
+ * 
+ * Pattern: Extract base name in format "fileA (X)" from report filename.
+ * 
+ * Examples:
+ * - "fileA (1).pdf" -> "fileA (1)"
+ * - "fileA (1) (1).pdf" -> "fileA (1)" (removes trailing bracket for matching)
+ * - "fileA (2) (2).pdf" -> "fileA (2)"
  */
-function extractDocumentName(page1Text: string): string | null {
-  if (!page1Text || page1Text.trim().length === 0) {
-    return null;
+function extractDocumentKeyFromFilename(reportFileName: string): string | null {
+  if (!reportFileName) return null;
+  
+  // Remove .pdf extension
+  let baseName = reportFileName.replace(/\.pdf$/i, '').trim();
+  
+  // Pattern: Look for "name (X)" or "name (X) (Y)" pattern
+  // If there's a trailing bracket number, remove it to get the document key
+  // e.g., "fileA (1) (1)" -> "fileA (1)"
+  // e.g., "fileA (2) (2)" -> "fileA (2)"
+  
+  const trailingBracketPattern = /^(.+\s*\(\d+\))\s*\(\d+\)$/;
+  const match = baseName.match(trailingBracketPattern);
+  
+  if (match) {
+    // Has trailing bracket - return the base without it
+    return match[1].trim();
   }
   
-  const cleanText = page1Text.trim();
+  // Check if it matches "name (X)" pattern directly
+  const directPattern = /^(.+\s*\(\d+\))$/;
+  const directMatch = baseName.match(directPattern);
   
-  // Pattern 1: "Document: filename" or "File: filename" or "Name: filename"
-  const docPattern = /(?:document|file|name|title)\s*:\s*([^\n\r]+)/i;
-  const docMatch = cleanText.match(docPattern);
-  if (docMatch && docMatch[1]) {
-    return normalizeDocumentName(docMatch[1].trim());
+  if (directMatch) {
+    return directMatch[1].trim();
   }
   
-  // Pattern 2: Look for filename patterns with optional bracket numbers
-  // Match patterns like "fileA (1)" or "document name (2)" etc.
-  const filenamePattern = /([a-zA-Z0-9_\-\s]+(?:\s*\(\d+\))?)(?:\.[a-zA-Z0-9]+)?/g;
-  const matches = cleanText.match(filenamePattern);
-  
-  if (matches && matches.length > 0) {
-    const candidates = matches
-      .map(m => m.trim())
-      .filter(m => m.length >= 3 && m.length <= 100)
-      .filter(m => !/^(page|similarity|ai|detection|report|overall|detected|turnitin|originality)/i.test(m));
-    
-    if (candidates.length > 0) {
-      return normalizeDocumentName(candidates[0]);
-    }
-  }
-  
-  // Pattern 3: Take the first substantial line
-  const lines = cleanText.split(/[\n\r]+/).map(l => l.trim()).filter(l => l.length > 0);
-  for (const line of lines) {
-    if (/^(similarity|ai|detection|report|overall|page|\d+%)/i.test(line)) continue;
-    if (line.length >= 3 && line.length <= 100) {
-      return normalizeDocumentName(line);
-    }
-  }
-  
-  return null;
+  // Fallback: return the base name as-is
+  return baseName;
 }
 
 /**
- * Normalize a document name for matching purposes.
- * Removes extensions, converts to lowercase, preserves bracket numbers.
- */
-function normalizeDocumentName(name: string): string {
-  let normalized = name.toLowerCase().trim();
-  // Remove file extension if present
-  normalized = normalized.replace(/\.[a-zA-Z0-9]+$/, '');
-  // Remove extra whitespace
-  normalized = normalized.replace(/\s+/g, ' ').trim();
-  return normalized;
-}
-
-/**
- * Get expected report names based on original_file_name and is_pdf_original.
+ * Get expected report filenames based on document's original_file_name and is_pdf_original.
  * 
  * If is_pdf_original = false:
- *   - Similarity report: fileA (X).pdf
- *   - AI report: fileA (X) (1).pdf
+ *   - Report 1: fileA (X).pdf
+ *   - Report 2: fileA (X) (1).pdf
  * 
  * If is_pdf_original = true:
- *   - Similarity report: fileA (X) (1).pdf
- *   - AI report: fileA (X) (2).pdf
+ *   - Report 1: fileA (X) (1).pdf
+ *   - Report 2: fileA (X) (2).pdf
  */
-function getExpectedReportNames(originalFileName: string, isPdfOriginal: boolean): { similarity: string; ai: string } {
+function getExpectedReportNames(originalFileName: string, isPdfOriginal: boolean): { report1: string; report2: string } {
   const baseName = originalFileName.trim();
   
   if (isPdfOriginal) {
     return {
-      similarity: `${baseName} (1)`,
-      ai: `${baseName} (2)`,
+      report1: `${baseName} (1)`,
+      report2: `${baseName} (2)`,
     };
   } else {
     return {
-      similarity: baseName,
-      ai: `${baseName} (1)`,
+      report1: baseName,
+      report2: `${baseName} (1)`,
     };
   }
 }
 
 /**
- * Classify report type and extract percentage from page 2 text.
+ * STAGE 1: Find matching document based on report filename using naming conventions.
+ * This does NOT determine report type - just groups by document key.
  */
-function classifyAndExtractPercentage(page2Text: string): { reportType: 'similarity' | 'ai' | 'unknown'; percentage: number | null } {
+function findDocumentByNaming(reportFileName: string, documents: DocumentRecord[]): { doc: DocumentRecord | null; documentKey: string | null } {
+  const documentKey = extractDocumentKeyFromFilename(reportFileName);
+  
+  if (!documentKey) {
+    return { doc: null, documentKey: null };
+  }
+  
+  const normalizedKey = documentKey.toLowerCase().trim();
+  
+  for (const doc of documents) {
+    if (!doc.original_file_name) continue;
+    
+    const isPdfOriginal = doc.is_pdf_original === true;
+    const expectedNames = getExpectedReportNames(doc.original_file_name, isPdfOriginal);
+    
+    // Normalize for comparison
+    const normalizedOriginal = doc.original_file_name.toLowerCase().trim();
+    const normalizedReport1 = expectedNames.report1.toLowerCase().trim();
+    const normalizedReport2 = expectedNames.report2.toLowerCase().trim();
+    
+    // Remove .pdf extension from report filename for comparison
+    const reportBaseName = reportFileName.replace(/\.pdf$/i, '').toLowerCase().trim();
+    
+    // Check if report filename matches any expected pattern for this document
+    if (reportBaseName === normalizedReport1 || 
+        reportBaseName === normalizedReport2 ||
+        reportBaseName === normalizedOriginal) {
+      console.log(`Matched report "${reportFileName}" to document "${doc.original_file_name}" (id: ${doc.id})`);
+      return { doc, documentKey: doc.original_file_name };
+    }
+    
+    // Also check if document key matches original_file_name
+    if (normalizedKey === normalizedOriginal) {
+      console.log(`Matched by document key "${documentKey}" to document "${doc.original_file_name}" (id: ${doc.id})`);
+      return { doc, documentKey: doc.original_file_name };
+    }
+  }
+  
+  return { doc: null, documentKey };
+}
+
+/**
+ * STAGE 2: Classify report type and extract percentage from page 2 PDF content.
+ * 
+ * - "overall similarity" -> Similarity Report, extract X% overall similarity
+ * - "detected as ai" -> AI Report, extract X% detected as ai
+ */
+function classifyReportFromContent(page2Text: string): { reportType: 'similarity' | 'ai' | 'unknown'; percentage: number | null } {
   if (!page2Text || page2Text.trim().length === 0) {
     return { reportType: 'unknown', percentage: null };
   }
   
   const lowerText = page2Text.toLowerCase();
-  
-  // Check for AI detection report: "detected as ai"
-  if (lowerText.includes('detected as ai')) {
-    const aiPattern = /(\d{1,3})%\s*detected\s*as\s*ai/i;
-    const aiMatch = page2Text.match(aiPattern);
-    const percentage = aiMatch ? parseInt(aiMatch[1], 10) : null;
-    
-    return { 
-      reportType: 'ai', 
-      percentage: percentage !== null && percentage >= 0 && percentage <= 100 ? percentage : null 
-    };
-  }
   
   // Check for Similarity report: "overall similarity"
   if (lowerText.includes('overall similarity')) {
@@ -198,54 +226,19 @@ function classifyAndExtractPercentage(page2Text: string): { reportType: 'similar
     };
   }
   
-  return { reportType: 'unknown', percentage: null };
-}
-
-/**
- * Find matching document based on extracted document name and expected report naming.
- */
-function findMatchingDocument(
-  documentName: string,
-  reportType: 'similarity' | 'ai',
-  documents: DocumentRecord[]
-): DocumentRecord | null {
-  const normalizedExtractedName = documentName.toLowerCase().trim();
-  
-  for (const doc of documents) {
-    if (!doc.original_file_name) continue;
+  // Check for AI detection report: "detected as ai"
+  if (lowerText.includes('detected as ai')) {
+    const aiPattern = /(\d{1,3})%\s*detected\s*as\s*ai/i;
+    const aiMatch = page2Text.match(aiPattern);
+    const percentage = aiMatch ? parseInt(aiMatch[1], 10) : null;
     
-    const isPdfOriginal = doc.is_pdf_original === true;
-    const expectedNames = getExpectedReportNames(doc.original_file_name, isPdfOriginal);
-    
-    // Normalize expected names for comparison
-    const expectedSimilarity = expectedNames.similarity.toLowerCase().trim();
-    const expectedAi = expectedNames.ai.toLowerCase().trim();
-    
-    // Check if the extracted document name matches the expected report name for this report type
-    if (reportType === 'similarity') {
-      if (normalizedExtractedName === expectedSimilarity || 
-          normalizedExtractedName.includes(expectedSimilarity) ||
-          expectedSimilarity.includes(normalizedExtractedName)) {
-        return doc;
-      }
-    } else if (reportType === 'ai') {
-      if (normalizedExtractedName === expectedAi ||
-          normalizedExtractedName.includes(expectedAi) ||
-          expectedAi.includes(normalizedExtractedName)) {
-        return doc;
-      }
-    }
-    
-    // Also try matching directly against original_file_name
-    const normalizedOriginal = doc.original_file_name.toLowerCase().trim();
-    if (normalizedExtractedName === normalizedOriginal ||
-        normalizedExtractedName.includes(normalizedOriginal) ||
-        normalizedOriginal.includes(normalizedExtractedName)) {
-      return doc;
-    }
+    return { 
+      reportType: 'ai', 
+      percentage: percentage !== null && percentage >= 0 && percentage <= 100 ? percentage : null 
+    };
   }
   
-  return null;
+  return { reportType: 'unknown', percentage: null };
 }
 
 serve(async (req: Request) => {
@@ -301,9 +294,9 @@ serve(async (req: Request) => {
       });
     }
 
-    console.log(`Processing ${reports.length} reports with PDF text extraction`);
+    console.log(`Processing ${reports.length} reports with two-stage logic`);
 
-    // Fetch all pending and in_progress documents with new columns
+    // Fetch all pending and in_progress documents
     const { data: documents, error: docError } = await supabase
       .from('documents')
       .select('id, file_name, normalized_filename, original_file_name, is_pdf_original, user_id, similarity_report_path, ai_report_path, similarity_percentage, ai_percentage, status, needs_review')
@@ -331,20 +324,58 @@ serve(async (req: Request) => {
       },
     };
 
-    // Process each report
+    // Process each report with two-stage logic
     for (const report of reports) {
-      console.log(`Processing report: ${report.fileName}`);
+      console.log(`\n=== Processing report: ${report.fileName} ===`);
       
       const processedReport: ProcessedReport = {
         fileName: report.fileName,
         filePath: report.filePath,
-        documentName: null,
+        documentKey: null,
         reportType: 'unknown',
         percentage: null,
         matchedDocumentId: null,
       };
 
       try {
+        // =====================================
+        // STAGE 1: Group by naming convention
+        // =====================================
+        console.log('Stage 1: Matching by filename pattern...');
+        const { doc: matchedDoc, documentKey } = findDocumentByNaming(report.fileName, documents || []);
+        processedReport.documentKey = documentKey;
+
+        if (!matchedDoc) {
+          console.log(`Stage 1 failed: No document found for key "${documentKey}"`);
+          processedReport.error = 'No matching document found by filename';
+          result.processed.push(processedReport);
+          
+          // Store in unmatched_reports for manual review
+          await supabase.from('unmatched_reports').insert({
+            file_name: report.fileName,
+            normalized_filename: documentKey || report.fileName,
+            file_path: report.filePath,
+            report_type: 'unknown',
+            uploaded_by: user.id,
+          });
+          
+          result.unmatched.push({ 
+            fileName: report.fileName, 
+            documentKey, 
+            reason: 'No matching document found by filename pattern' 
+          });
+          result.stats.unmatchedCount++;
+          continue;
+        }
+
+        processedReport.matchedDocumentId = matchedDoc.id;
+        console.log(`Stage 1 success: Matched to document ${matchedDoc.id} (${matchedDoc.original_file_name})`);
+
+        // =====================================
+        // STAGE 2: Classify by PDF content
+        // =====================================
+        console.log('Stage 2: Classifying report type from PDF content...');
+        
         // Download the PDF from storage
         const { data: fileData, error: downloadError } = await supabase.storage
           .from('reports')
@@ -352,11 +383,11 @@ serve(async (req: Request) => {
 
         if (downloadError || !fileData) {
           console.error(`Failed to download ${report.fileName}:`, downloadError);
-          processedReport.error = 'Failed to download file';
+          processedReport.error = 'Failed to download file for classification';
           result.processed.push(processedReport);
           result.unmatched.push({ 
             fileName: report.fileName, 
-            documentName: null, 
+            documentKey, 
             reason: 'Failed to download file' 
           });
           result.stats.unmatchedCount++;
@@ -367,95 +398,42 @@ serve(async (req: Request) => {
         const arrayBuffer = await fileData.arrayBuffer();
         const pdfData = new Uint8Array(arrayBuffer);
 
-        // Extract text from page 1 (document name)
-        const page1Text = await extractTextFromPage(pdfData, 1);
-        console.log(`Page 1 text (first 200 chars): ${page1Text.substring(0, 200)}`);
-        
-        const documentName = extractDocumentName(page1Text);
-        processedReport.documentName = documentName;
-        console.log(`Extracted document name: ${documentName}`);
-
-        // Extract text from page 2 (report type and percentage)
+        // Extract text from page 2 for classification
         const page2Text = await extractTextFromPage(pdfData, 2);
-        console.log(`Page 2 text (first 200 chars): ${page2Text.substring(0, 200)}`);
+        console.log(`Page 2 text (first 300 chars): ${page2Text.substring(0, 300)}`);
         
-        const { reportType, percentage } = classifyAndExtractPercentage(page2Text);
+        const { reportType, percentage } = classifyReportFromContent(page2Text);
         processedReport.reportType = reportType;
         processedReport.percentage = percentage;
-        console.log(`Classified as: ${reportType}, percentage: ${percentage}`);
+        console.log(`Stage 2 result: type=${reportType}, percentage=${percentage}`);
 
         if (reportType === 'unknown') {
           result.stats.unknownTypeCount++;
-          processedReport.error = 'Could not determine report type';
+          processedReport.error = 'Could not determine report type from PDF content';
           result.processed.push(processedReport);
           
           // Store in unmatched_reports for manual review
           await supabase.from('unmatched_reports').insert({
             file_name: report.fileName,
-            normalized_filename: documentName || report.fileName,
+            normalized_filename: documentKey || report.fileName,
             file_path: report.filePath,
             report_type: 'unknown',
+            matched_document_id: matchedDoc.id,
             uploaded_by: user.id,
           });
           
           result.unmatched.push({ 
             fileName: report.fileName, 
-            documentName, 
-            reason: 'Could not determine report type' 
+            documentKey, 
+            reason: 'Could not determine report type from PDF content' 
           });
           result.stats.unmatchedCount++;
           continue;
         }
 
-        if (!documentName) {
-          processedReport.error = 'Could not extract document name from page 1';
-          result.processed.push(processedReport);
-          
-          // Store in unmatched_reports for manual review
-          await supabase.from('unmatched_reports').insert({
-            file_name: report.fileName,
-            normalized_filename: report.fileName,
-            file_path: report.filePath,
-            report_type: reportType,
-            uploaded_by: user.id,
-          });
-          
-          result.unmatched.push({ 
-            fileName: report.fileName, 
-            documentName: null, 
-            reason: 'Could not extract document name' 
-          });
-          result.stats.unmatchedCount++;
-          continue;
-        }
-
-        // Find matching document using the new logic
-        const matchedDoc = findMatchingDocument(documentName, reportType, documents || []);
-
-        if (!matchedDoc) {
-          processedReport.error = 'No matching document found';
-          result.processed.push(processedReport);
-          
-          // Store in unmatched_reports for manual review
-          await supabase.from('unmatched_reports').insert({
-            file_name: report.fileName,
-            normalized_filename: documentName,
-            file_path: report.filePath,
-            report_type: reportType,
-            uploaded_by: user.id,
-          });
-          
-          result.unmatched.push({ 
-            fileName: report.fileName, 
-            documentName, 
-            reason: 'No matching document found' 
-          });
-          result.stats.unmatchedCount++;
-          continue;
-        }
-
-        processedReport.matchedDocumentId = matchedDoc.id;
-
+        // =====================================
+        // UPDATE DATABASE
+        // =====================================
         // Prepare update data based on report type - ONLY update the relevant fields
         const updateData: Record<string, unknown> = {};
         
@@ -470,6 +448,7 @@ serve(async (req: Request) => {
           if (percentage !== null) {
             updateData.similarity_percentage = percentage;
           }
+          console.log(`Updating similarity report for document ${matchedDoc.id}`);
         } else if (reportType === 'ai') {
           if (matchedDoc.ai_report_path) {
             console.log(`Document ${matchedDoc.id} already has an AI report, skipping`);
@@ -481,6 +460,7 @@ serve(async (req: Request) => {
           if (percentage !== null) {
             updateData.ai_percentage = percentage;
           }
+          console.log(`Updating AI report for document ${matchedDoc.id}`);
         }
 
         // Check if both reports will be present after this update
@@ -509,6 +489,15 @@ serve(async (req: Request) => {
           continue;
         }
 
+        // Update local document state for subsequent reports in same batch
+        if (reportType === 'similarity') {
+          matchedDoc.similarity_report_path = report.filePath;
+          matchedDoc.similarity_percentage = percentage;
+        } else if (reportType === 'ai') {
+          matchedDoc.ai_report_path = report.filePath;
+          matchedDoc.ai_percentage = percentage;
+        }
+
         result.mapped.push({
           documentId: matchedDoc.id,
           fileName: report.fileName,
@@ -517,7 +506,7 @@ serve(async (req: Request) => {
         });
         result.stats.mappedCount++;
         result.processed.push(processedReport);
-        console.log(`Successfully mapped ${report.fileName} to document ${matchedDoc.id}`);
+        console.log(`Successfully mapped ${report.fileName} to document ${matchedDoc.id} as ${reportType} report`);
 
       } catch (error) {
         console.error(`Error processing ${report.fileName}:`, error);
@@ -583,7 +572,8 @@ serve(async (req: Request) => {
       }
     }
 
-    console.log('Bulk report processing complete:', result.stats);
+    console.log('\n=== Bulk report processing complete ===');
+    console.log('Stats:', result.stats);
 
     return new Response(JSON.stringify(result), {
       status: 200,
