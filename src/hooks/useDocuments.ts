@@ -655,6 +655,99 @@ export const useDocuments = () => {
     }
   };
 
+  // Delete document and all associated files (customer can only delete their own completed documents)
+  const deleteDocument = async (documentId: string, document: Document): Promise<boolean> => {
+    if (!user) return false;
+
+    // Only allow deletion of completed documents
+    if (document.status !== 'completed') {
+      toast({
+        title: 'Cannot Delete',
+        description: 'You can only delete completed documents.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // Customer can only delete their own documents
+    if (role === 'customer' && document.user_id !== user.id) {
+      toast({
+        title: 'Unauthorized',
+        description: 'You can only delete your own documents.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    try {
+      // 1. Delete original document from storage
+      if (document.file_path) {
+        const { error: docStorageError } = await supabase.storage
+          .from('documents')
+          .remove([document.file_path]);
+        if (docStorageError) {
+          console.error('Error deleting document from storage:', docStorageError);
+        }
+      }
+
+      // 2. Delete similarity report from storage
+      if (document.similarity_report_path) {
+        const { error: simStorageError } = await supabase.storage
+          .from('reports')
+          .remove([document.similarity_report_path]);
+        if (simStorageError) {
+          console.error('Error deleting similarity report from storage:', simStorageError);
+        }
+      }
+
+      // 3. Delete AI report from storage
+      if (document.ai_report_path) {
+        const { error: aiStorageError } = await supabase.storage
+          .from('reports')
+          .remove([document.ai_report_path]);
+        if (aiStorageError) {
+          console.error('Error deleting AI report from storage:', aiStorageError);
+        }
+      }
+
+      // 4. Delete document tag assignments
+      await supabase
+        .from('document_tag_assignments')
+        .delete()
+        .eq('document_id', documentId);
+
+      // 5. Delete activity logs for this document
+      await supabase
+        .from('activity_logs')
+        .delete()
+        .eq('document_id', documentId);
+
+      // 6. Delete the document record itself
+      const { error: deleteError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', documentId);
+
+      if (deleteError) throw deleteError;
+
+      toast({
+        title: 'Document Deleted',
+        description: 'File and reports deleted successfully.',
+      });
+
+      await fetchDocuments();
+      return true;
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete document. Please try again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchDocuments();
   }, [user, role]);
@@ -693,5 +786,6 @@ export const useDocuments = () => {
     uploadReport,
     fetchDocuments,
     releaseDocument,
+    deleteDocument,
   };
 };
