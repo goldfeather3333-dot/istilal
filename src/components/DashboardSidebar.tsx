@@ -618,9 +618,7 @@ export const DashboardSidebar: React.FC = () => {
             <span className="font-display font-bold text-lg">PlagaiScans</span>
           </Link>
           <div className="flex items-center gap-1.5 mt-2 ml-10">
-            <span className="text-xs text-muted-foreground">Powered by</span>
-            <span className="text-xs font-bold text-[#1f4e79]">turnitin</span>
-            <span className="text-[#d9534f] text-xs">®</span>
+            <span className="text-xs text-muted-foreground">Advanced Plagiarism Detection</span>
           </div>
         </div>
 

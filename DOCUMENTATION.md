@@ -2,7 +2,7 @@
 
 ## Overview
 
-PlagaiScans is a comprehensive document plagiarism and AI detection platform powered by Turnitin®. The platform enables customers to submit documents for similarity and AI content analysis, with staff members processing documents and administrators managing the entire system.
+PlagaiScans is a comprehensive document plagiarism and AI detection platform using advanced similarity analysis. The platform enables customers to submit documents for similarity and AI content analysis, with staff members processing documents and administrators managing the entire system.
 
 ---
 
@@ -60,7 +60,6 @@ PlagaiScans is a comprehensive document plagiarism and AI detection platform pow
 
 ### 🏠 Landing Page (`/`)
 - Hero section with platform introduction
-- Turnitin® partnership badge
 - Services overview (Similarity Detection, AI Detection)
 - About section
 - Contact information
@@ -414,11 +413,6 @@ get_user_role(user_id UUID) RETURNS app_role
 - **Credit Purchase**: Opens WhatsApp with pre-filled message
 - **Number Configuration**: Set in Admin Settings
 
-### Turnitin® Partnership
-- Branded as "Powered by turnitin®"
-- Logo displayed in sidebar
-- Similarity detection powered by Turnitin database
-
 ### Email (Resend)
 - Document completion notifications
 - Password reset emails
@@ -443,8 +437,6 @@ get_user_role(user_id UUID) RETURNS app_role
 
 ### Design System
 - **Primary Color**: Blue (#2563eb)
-- **Turnitin Blue**: #1f4e79
-- **Turnitin Red**: #d9534f
 - **Font**: System default with custom display font
 - **Theme**: Light/Dark mode support via CSS variables
 
@@ -512,4 +504,4 @@ VITE_SUPABASE_PROJECT_ID=<project_id>
 
 **Platform**: PlagaiScans v1.0  
 **Last Updated**: December 2024  
-**Powered by**: Turnitin® | Lovable Cloud
+**Operated by**: Goldfeather Prem Ltd (UK) | Lovable Cloud

@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { StatusBadge } from '@/components/StatusBadge';
 import { DocumentSearchFilters, DocumentFilters, filterDocuments } from '@/components/DocumentSearchFilters';
 import { DocumentTagManager } from '@/components/DocumentTagManager';
-import { FileText, Download, Loader2, Star, StarOff, DownloadCloud, Package } from 'lucide-react';
+import { FileText, Download, Loader2, Star, StarOff, DownloadCloud, Package, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -19,14 +19,27 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function MyDocuments() {
-  const { documents, loading, downloadFile } = useDocuments();
+  const { documents, loading, downloadFile, deleteDocument } = useDocuments();
   const { role } = useAuth();
   const { toast } = useToast();
   const isStaffOrAdmin = role === 'staff' || role === 'admin';
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [filters, setFilters] = useState<DocumentFilters>({
     search: '',
     status: 'all',
@@ -108,6 +121,24 @@ export default function MyDocuments() {
     setBulkDownloading(false);
     setSelectedIds(new Set());
     toast({ title: 'Downloads complete!' });
+  };
+
+  const handleDeleteClick = (doc: Document) => {
+    setDocumentToDelete(doc);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!documentToDelete) return;
+    
+    setDeleting(true);
+    const success = await deleteDocument(documentToDelete.id, documentToDelete);
+    setDeleting(false);
+    
+    if (success) {
+      setDeleteDialogOpen(false);
+      setDocumentToDelete(null);
+    }
   };
 
   const completedCount = filteredDocuments.filter(d => d.status === 'completed').length;
@@ -207,6 +238,7 @@ export default function MyDocuments() {
                       <TableHead className="text-center">Similarity Report</TableHead>
                       <TableHead className="text-center">AI Report</TableHead>
                       <TableHead>Remarks</TableHead>
+                      {role === 'customer' && <TableHead className="text-center">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -215,6 +247,7 @@ export default function MyDocuments() {
                       const baseName = doc.file_name.replace(/\.[^/.]+$/, '');
                       const isSelected = selectedIds.has(doc.id);
                       const canSelect = doc.status === 'completed';
+                      const canDelete = role === 'customer' && doc.status === 'completed';
 
                       return (
                         <TableRow key={doc.id} className={isSelected ? 'bg-primary/5' : ''}>
@@ -306,6 +339,21 @@ export default function MyDocuments() {
                               <span className="text-sm text-muted-foreground">-</span>
                             )}
                           </TableCell>
+                          {role === 'customer' && (
+                            <TableCell className="text-center">
+                              {canDelete && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteClick(doc)}
+                                  title="Delete document"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}
@@ -316,6 +364,42 @@ export default function MyDocuments() {
           </Card>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this file?
+              <br /><br />
+              <strong>"{documentToDelete?.file_name}"</strong>
+              <br /><br />
+              This action cannot be undone. The original document and all associated reports will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Permanently
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

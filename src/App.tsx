@@ -61,6 +61,11 @@ const AdminBulkReportUpload = lazy(() => import("./pages/AdminBulkReportUpload")
 const AdminUnmatchedReports = lazy(() => import("./pages/AdminUnmatchedReports"));
 const AdminNeedsReview = lazy(() => import("./pages/AdminNeedsReview"));
 const ReferralProgram = lazy(() => import("./pages/ReferralProgram"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
+const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
+const Contact = lazy(() => import("./pages/Contact"));
 
 const queryClient = new QueryClient();
 
@@ -163,11 +168,11 @@ const AppRoutes = () => (
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/install" element={<Install />} />
       <Route path="/guest-upload" element={<PublicRoute><GuestUpload /></PublicRoute>} />
-      <Route path="/about-us" element={<AboutUs />} />
-      <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-      <Route path="/refund-policy" element={<RefundPolicy />} />
-      <Route path="/contact" element={<Contact />} />
+      <Route path="/about-us" element={<PublicRoute><AboutUs /></PublicRoute>} />
+      <Route path="/terms-and-conditions" element={<PublicRoute><TermsAndConditions /></PublicRoute>} />
+      <Route path="/privacy-policy" element={<PublicRoute><PrivacyPolicy /></PublicRoute>} />
+      <Route path="/refund-policy" element={<PublicRoute><RefundPolicy /></PublicRoute>} />
+      <Route path="/contact" element={<PublicRoute><Contact /></PublicRoute>} />
       {/* Customer Routes */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/dashboard/upload" element={<ProtectedRoute allowedRoles={['customer']}><UploadDocument /></ProtectedRoute>} />
