@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as pdfjs from "https://esm.sh/pdfjs-dist@4.0.379/build/pdf.min.mjs";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -110,25 +109,33 @@ function extractDocumentKey(filename: string): string {
 }
 
 /**
- * Extract text from a specific page of a PDF
+ * Extract text from a specific page of a PDF using pdfjs-serverless
  */
 async function extractTextFromPage(pdfData: Uint8Array, pageNumber: number): Promise<string> {
   try {
-    const loadingTask = pdfjs.getDocument({ data: pdfData });
-    const pdf = await loadingTask.promise;
+    // Dynamic import of pdfjs-serverless for Deno compatibility
+    const { getDocument } = await import("https://esm.sh/pdfjs-serverless");
     
-    if (pageNumber > pdf.numPages) {
-      console.log(`Page ${pageNumber} does not exist (PDF has ${pdf.numPages} pages)`);
+    const doc = await getDocument({
+      data: pdfData,
+      useSystemFonts: true,
+    }).promise;
+    
+    if (pageNumber > doc.numPages) {
+      console.log(`Page ${pageNumber} does not exist (PDF has ${doc.numPages} pages)`);
       return '';
     }
     
-    const page = await pdf.getPage(pageNumber);
+    const page = await doc.getPage(pageNumber);
     const textContent = await page.getTextContent();
     
+    // deno-lint-ignore no-explicit-any
     const text = textContent.items
-      .map((item: { str?: string }) => item.str || '')
+      .filter((item: any) => 'str' in item)
+      .map((item: any) => item.str || '')
       .join(' ');
     
+    console.log(`Extracted ${text.length} chars from page ${pageNumber}`);
     return text;
   } catch (error) {
     console.error(`Error extracting text from page ${pageNumber}:`, error);
