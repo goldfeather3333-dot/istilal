@@ -439,26 +439,52 @@ export const useDocuments = () => {
 
       if (error) throw error;
 
-      // Fetch the file as blob to force download (works better on iOS)
+      const fileName = originalFileName || path.split('/').pop() || 'download';
+
+      // Fetch the file as blob
       const response = await fetch(data.signedUrl);
       if (!response.ok) throw new Error('Failed to fetch file');
       
       const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
       
-      // Create anchor and force download
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = originalFileName || path.split('/').pop() || 'download';
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
+      // Force download using application/octet-stream to bypass browser preview
+      const downloadBlob = new Blob([blob], { type: 'application/octet-stream' });
+      const blobUrl = URL.createObjectURL(downloadBlob);
       
-      // Cleanup after download starts - use longer timeout for reliability
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-      }, 2000);
+      // For iOS Safari - try using window.location as fallback
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      
+      if (isIOS && 'saveAs' in navigator) {
+        // Use native save if available
+        (navigator as any).saveAs(downloadBlob, fileName);
+      } else {
+        // Create anchor with forced download
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        link.setAttribute('download', fileName);
+        link.style.cssText = 'position:fixed;left:-9999px;';
+        document.body.appendChild(link);
+        
+        // Dispatch click event for better iOS compatibility
+        const clickEvent = new MouseEvent('click', {
+          view: window,
+          bubbles: true,
+          cancelable: false
+        });
+        link.dispatchEvent(clickEvent);
+        
+        // Cleanup
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 3000);
+      }
+
+      toast({
+        title: 'Download started',
+        description: fileName,
+      });
     } catch (error) {
       console.error('Error downloading file:', error);
       toast({
