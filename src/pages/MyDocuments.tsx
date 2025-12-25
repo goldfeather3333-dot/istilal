@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import JSZip from 'jszip';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -98,29 +99,70 @@ export default function MyDocuments() {
       return;
     }
 
-    setBulkDownloading(true);
-    toast({ title: 'Starting downloads...', description: `Downloading ${selectedDocs.length} document(s)` });
-
-    for (let i = 0; i < selectedDocs.length; i++) {
-      const doc = selectedDocs[i];
+    // Build list of report files to download
+    const files: Array<{ path: string; name: string }> = [];
+    for (const doc of selectedDocs) {
       const baseName = doc.file_name.replace(/\.[^/.]+$/, '');
-      
-      // Download similarity report if exists
-      if (doc.similarity_report_path) {
-        await downloadFile(doc.similarity_report_path, 'reports', `${baseName}_similarity.pdf`);
-        await new Promise(r => setTimeout(r, 300));
-      }
-      
-      // Download AI report if exists
-      if (doc.ai_report_path) {
-        await downloadFile(doc.ai_report_path, 'reports', `${baseName}_ai.pdf`);
-        await new Promise(r => setTimeout(r, 300));
-      }
+      if (doc.similarity_report_path) files.push({ path: doc.similarity_report_path, name: `${baseName}_similarity.pdf` });
+      if (doc.ai_report_path) files.push({ path: doc.ai_report_path, name: `${baseName}_ai.pdf` });
     }
 
-    setBulkDownloading(false);
-    setSelectedIds(new Set());
-    toast({ title: 'Downloads complete!' });
+    if (files.length === 0) {
+      toast({ title: 'No reports found for selected documents', variant: 'destructive' });
+      return;
+    }
+
+    setBulkDownloading(true);
+    try {
+      toast({ title: 'Preparing ZIP…', description: `Collecting ${files.length} file(s)` });
+
+      const zip = new JSZip();
+
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+
+        const { data, error } = await supabase.storage
+          .from('reports')
+          .createSignedUrl(f.path, 300);
+
+        if (error) throw error;
+
+        const res = await fetch(data.signedUrl);
+        if (!res.ok) throw new Error(`Failed to fetch ${f.name} (${res.status})`);
+
+        const buf = await res.arrayBuffer();
+        zip.file(f.name, buf);
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipName = `reports_${new Date().toISOString().slice(0, 10)}.zip`;
+      const url = URL.createObjectURL(zipBlob);
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        toast({ title: 'Opened ZIP', description: 'Use Share → Save to Files to download on iPhone/iPad.' });
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = zipName;
+        a.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 2000);
+        toast({ title: 'Download started', description: zipName });
+      }
+
+      setSelectedIds(new Set());
+    } catch (e) {
+      console.error('Bulk ZIP download failed:', e);
+      toast({ title: 'Download failed', description: 'Could not prepare the ZIP file.', variant: 'destructive' });
+    } finally {
+      setBulkDownloading(false);
+    }
   };
 
   const handleDeleteClick = (doc: Document) => {
