@@ -396,9 +396,11 @@ export type Database = {
           file_path: string
           id: string
           is_favorite: boolean | null
+          is_pdf_original: boolean | null
           magic_link_id: string | null
           needs_review: boolean | null
           normalized_filename: string | null
+          original_file_name: string | null
           remarks: string | null
           review_reason: string | null
           similarity_percentage: number | null
@@ -419,9 +421,11 @@ export type Database = {
           file_path: string
           id?: string
           is_favorite?: boolean | null
+          is_pdf_original?: boolean | null
           magic_link_id?: string | null
           needs_review?: boolean | null
           normalized_filename?: string | null
+          original_file_name?: string | null
           remarks?: string | null
           review_reason?: string | null
           similarity_percentage?: number | null
@@ -442,9 +446,11 @@ export type Database = {
           file_path?: string
           id?: string
           is_favorite?: boolean | null
+          is_pdf_original?: boolean | null
           magic_link_id?: string | null
           needs_review?: boolean | null
           normalized_filename?: string | null
+          original_file_name?: string | null
           remarks?: string | null
           review_reason?: string | null
           similarity_percentage?: number | null

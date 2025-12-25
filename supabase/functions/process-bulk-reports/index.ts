@@ -37,12 +37,26 @@ interface ProcessingResult {
   };
 }
 
+interface DocumentRecord {
+  id: string;
+  file_name: string;
+  normalized_filename: string | null;
+  original_file_name: string | null;
+  is_pdf_original: boolean | null;
+  user_id: string | null;
+  similarity_report_path: string | null;
+  ai_report_path: string | null;
+  similarity_percentage: number | null;
+  ai_percentage: number | null;
+  status: string;
+  needs_review: boolean | null;
+}
+
 /**
  * Extract text from a specific page of a PDF
  */
 async function extractTextFromPage(pdfData: Uint8Array, pageNumber: number): Promise<string> {
   try {
-    // Load the PDF document
     const loadingTask = pdfjs.getDocument({ data: pdfData });
     const pdf = await loadingTask.promise;
     
@@ -53,7 +67,6 @@ async function extractTextFromPage(pdfData: Uint8Array, pageNumber: number): Pro
     const page = await pdf.getPage(pageNumber);
     const textContent = await page.getTextContent();
     
-    // Combine all text items
     const text = textContent.items
       .map((item: { str?: string }) => item.str || '')
       .join(' ');
@@ -67,47 +80,41 @@ async function extractTextFromPage(pdfData: Uint8Array, pageNumber: number): Pro
 
 /**
  * Extract document name from page 1 text.
- * The document name is typically displayed on the cover page.
- * We look for common patterns and extract the most likely document name.
+ * Returns the document name in format "fileA (X)" for matching.
  */
 function extractDocumentName(page1Text: string): string | null {
   if (!page1Text || page1Text.trim().length === 0) {
     return null;
   }
   
-  // Clean and normalize the text
   const cleanText = page1Text.trim();
   
-  // Common patterns for document names on cover pages
-  // Pattern 1: "Document: filename" or "File: filename"
+  // Pattern 1: "Document: filename" or "File: filename" or "Name: filename"
   const docPattern = /(?:document|file|name|title)\s*:\s*([^\n\r]+)/i;
   const docMatch = cleanText.match(docPattern);
   if (docMatch && docMatch[1]) {
     return normalizeDocumentName(docMatch[1].trim());
   }
   
-  // Pattern 2: Look for filename patterns (words with extensions or brackets)
-  const filenamePattern = /([a-zA-Z0-9_\-\s]+(?:\s*\(\d+\))?(?:\.[a-zA-Z0-9]+)?)/g;
+  // Pattern 2: Look for filename patterns with optional bracket numbers
+  // Match patterns like "fileA (1)" or "document name (2)" etc.
+  const filenamePattern = /([a-zA-Z0-9_\-\s]+(?:\s*\(\d+\))?)(?:\.[a-zA-Z0-9]+)?/g;
   const matches = cleanText.match(filenamePattern);
   
   if (matches && matches.length > 0) {
-    // Filter to find the most likely document name
-    // Prefer longer names that look like filenames
     const candidates = matches
       .map(m => m.trim())
       .filter(m => m.length >= 3 && m.length <= 100)
       .filter(m => !/^(page|similarity|ai|detection|report|overall|detected|turnitin|originality)/i.test(m));
     
     if (candidates.length > 0) {
-      // Return the first substantial candidate
       return normalizeDocumentName(candidates[0]);
     }
   }
   
-  // Pattern 3: Take the first substantial line that looks like a name
+  // Pattern 3: Take the first substantial line
   const lines = cleanText.split(/[\n\r]+/).map(l => l.trim()).filter(l => l.length > 0);
   for (const line of lines) {
-    // Skip common header/footer text
     if (/^(similarity|ai|detection|report|overall|page|\d+%)/i.test(line)) continue;
     if (line.length >= 3 && line.length <= 100) {
       return normalizeDocumentName(line);
@@ -119,7 +126,7 @@ function extractDocumentName(page1Text: string): string | null {
 
 /**
  * Normalize a document name for matching purposes.
- * Removes extensions and converts to lowercase.
+ * Removes extensions, converts to lowercase, preserves bracket numbers.
  */
 function normalizeDocumentName(name: string): string {
   let normalized = name.toLowerCase().trim();
@@ -128,6 +135,33 @@ function normalizeDocumentName(name: string): string {
   // Remove extra whitespace
   normalized = normalized.replace(/\s+/g, ' ').trim();
   return normalized;
+}
+
+/**
+ * Get expected report names based on original_file_name and is_pdf_original.
+ * 
+ * If is_pdf_original = false:
+ *   - Similarity report: fileA (X).pdf
+ *   - AI report: fileA (X) (1).pdf
+ * 
+ * If is_pdf_original = true:
+ *   - Similarity report: fileA (X) (1).pdf
+ *   - AI report: fileA (X) (2).pdf
+ */
+function getExpectedReportNames(originalFileName: string, isPdfOriginal: boolean): { similarity: string; ai: string } {
+  const baseName = originalFileName.trim();
+  
+  if (isPdfOriginal) {
+    return {
+      similarity: `${baseName} (1)`,
+      ai: `${baseName} (2)`,
+    };
+  } else {
+    return {
+      similarity: baseName,
+      ai: `${baseName} (1)`,
+    };
+  }
 }
 
 /**
@@ -142,7 +176,6 @@ function classifyAndExtractPercentage(page2Text: string): { reportType: 'similar
   
   // Check for AI detection report: "detected as ai"
   if (lowerText.includes('detected as ai')) {
-    // Extract percentage: "X% detected as ai"
     const aiPattern = /(\d{1,3})%\s*detected\s*as\s*ai/i;
     const aiMatch = page2Text.match(aiPattern);
     const percentage = aiMatch ? parseInt(aiMatch[1], 10) : null;
@@ -155,7 +188,6 @@ function classifyAndExtractPercentage(page2Text: string): { reportType: 'similar
   
   // Check for Similarity report: "overall similarity"
   if (lowerText.includes('overall similarity')) {
-    // Extract percentage: "X% overall similarity"
     const simPattern = /(\d{1,3})%\s*overall\s*similarity/i;
     const simMatch = page2Text.match(simPattern);
     const percentage = simMatch ? parseInt(simMatch[1], 10) : null;
@@ -169,8 +201,54 @@ function classifyAndExtractPercentage(page2Text: string): { reportType: 'similar
   return { reportType: 'unknown', percentage: null };
 }
 
+/**
+ * Find matching document based on extracted document name and expected report naming.
+ */
+function findMatchingDocument(
+  documentName: string,
+  reportType: 'similarity' | 'ai',
+  documents: DocumentRecord[]
+): DocumentRecord | null {
+  const normalizedExtractedName = documentName.toLowerCase().trim();
+  
+  for (const doc of documents) {
+    if (!doc.original_file_name) continue;
+    
+    const isPdfOriginal = doc.is_pdf_original === true;
+    const expectedNames = getExpectedReportNames(doc.original_file_name, isPdfOriginal);
+    
+    // Normalize expected names for comparison
+    const expectedSimilarity = expectedNames.similarity.toLowerCase().trim();
+    const expectedAi = expectedNames.ai.toLowerCase().trim();
+    
+    // Check if the extracted document name matches the expected report name for this report type
+    if (reportType === 'similarity') {
+      if (normalizedExtractedName === expectedSimilarity || 
+          normalizedExtractedName.includes(expectedSimilarity) ||
+          expectedSimilarity.includes(normalizedExtractedName)) {
+        return doc;
+      }
+    } else if (reportType === 'ai') {
+      if (normalizedExtractedName === expectedAi ||
+          normalizedExtractedName.includes(expectedAi) ||
+          expectedAi.includes(normalizedExtractedName)) {
+        return doc;
+      }
+    }
+    
+    // Also try matching directly against original_file_name
+    const normalizedOriginal = doc.original_file_name.toLowerCase().trim();
+    if (normalizedExtractedName === normalizedOriginal ||
+        normalizedExtractedName.includes(normalizedOriginal) ||
+        normalizedOriginal.includes(normalizedExtractedName)) {
+      return doc;
+    }
+  }
+  
+  return null;
+}
+
 serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -225,10 +303,10 @@ serve(async (req: Request) => {
 
     console.log(`Processing ${reports.length} reports with PDF text extraction`);
 
-    // Fetch all pending and in_progress documents for matching
+    // Fetch all pending and in_progress documents with new columns
     const { data: documents, error: docError } = await supabase
       .from('documents')
-      .select('id, file_name, normalized_filename, user_id, similarity_report_path, ai_report_path, similarity_percentage, ai_percentage, status, needs_review')
+      .select('id, file_name, normalized_filename, original_file_name, is_pdf_original, user_id, similarity_report_path, ai_report_path, similarity_percentage, ai_percentage, status, needs_review')
       .in('status', ['pending', 'in_progress']);
 
     if (docError) {
@@ -237,16 +315,6 @@ serve(async (req: Request) => {
     }
 
     console.log(`Found ${documents?.length || 0} pending/in_progress documents`);
-
-    // Create a map for faster document lookup by normalized name
-    const documentsByNormalizedName = new Map<string, typeof documents[number][]>();
-    for (const doc of documents || []) {
-      const normalizedName = doc.normalized_filename || normalizeDocumentName(doc.file_name);
-      if (!documentsByNormalizedName.has(normalizedName)) {
-        documentsByNormalizedName.set(normalizedName, []);
-      }
-      documentsByNormalizedName.get(normalizedName)!.push(doc);
-    }
 
     const result: ProcessingResult = {
       success: true,
@@ -361,21 +429,10 @@ serve(async (req: Request) => {
           continue;
         }
 
-        // Find matching document
-        const matchingDocs = documentsByNormalizedName.get(documentName) || [];
-        
-        // Also try partial matching for documents that might have slight variations
-        let candidateDocs = [...matchingDocs];
-        if (candidateDocs.length === 0) {
-          // Try to find documents with similar names
-          for (const [normalizedName, docs] of documentsByNormalizedName) {
-            if (normalizedName.includes(documentName) || documentName.includes(normalizedName)) {
-              candidateDocs.push(...docs);
-            }
-          }
-        }
+        // Find matching document using the new logic
+        const matchedDoc = findMatchingDocument(documentName, reportType, documents || []);
 
-        if (candidateDocs.length === 0) {
+        if (!matchedDoc) {
           processedReport.error = 'No matching document found';
           result.processed.push(processedReport);
           
@@ -397,36 +454,9 @@ serve(async (req: Request) => {
           continue;
         }
 
-        if (candidateDocs.length > 1) {
-          // Multiple matches - flag for manual review
-          processedReport.error = 'Multiple matching documents found';
-          result.processed.push(processedReport);
-          
-          // Flag all candidate documents for review
-          for (const doc of candidateDocs) {
-            await supabase
-              .from('documents')
-              .update({
-                needs_review: true,
-                review_reason: `Multiple documents match report "${report.fileName}"`,
-              })
-              .eq('id', doc.id);
-          }
-          
-          result.unmatched.push({ 
-            fileName: report.fileName, 
-            documentName, 
-            reason: 'Multiple matching documents found' 
-          });
-          result.stats.unmatchedCount++;
-          continue;
-        }
-
-        // Single match found
-        const matchedDoc = candidateDocs[0];
         processedReport.matchedDocumentId = matchedDoc.id;
 
-        // Prepare update data based on report type
+        // Prepare update data based on report type - ONLY update the relevant fields
         const updateData: Record<string, unknown> = {};
         
         if (reportType === 'similarity') {
