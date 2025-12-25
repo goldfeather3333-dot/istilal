@@ -440,46 +440,36 @@ export const useDocuments = () => {
       if (error) throw error;
 
       const fileName = originalFileName || path.split('/').pop() || 'download';
-
-      // Fetch the file as blob
-      const response = await fetch(data.signedUrl);
-      if (!response.ok) throw new Error('Failed to fetch file');
-      
-      const blob = await response.blob();
-      
-      // Force download using application/octet-stream to bypass browser preview
-      const downloadBlob = new Blob([blob], { type: 'application/octet-stream' });
-      const blobUrl = URL.createObjectURL(downloadBlob);
-      
-      // For iOS Safari - try using window.location as fallback
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      
-      if (isIOS && 'saveAs' in navigator) {
-        // Use native save if available
-        (navigator as any).saveAs(downloadBlob, fileName);
-      } else {
-        // Create anchor with forced download
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
-        link.setAttribute('download', fileName);
-        link.style.cssText = 'position:fixed;left:-9999px;';
-        document.body.appendChild(link);
-        
-        // Dispatch click event for better iOS compatibility
-        const clickEvent = new MouseEvent('click', {
-          view: window,
-          bubbles: true,
-          cancelable: false
+
+      // iOS Safari often ignores forced downloads (download attribute) — best-effort is to open the signed URL.
+      if (isIOS) {
+        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+        toast({
+          title: 'Opened file',
+          description: 'Use Share → Save to Files to download on iPhone/iPad.',
         });
-        link.dispatchEvent(clickEvent);
-        
-        // Cleanup
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-        }, 3000);
+        return;
       }
+
+      // Chrome/desktop: Fetch as blob and force a real download
+      const response = await fetch(data.signedUrl);
+      if (!response.ok) throw new Error(`Failed to fetch file (${response.status})`);
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      link.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+      document.body.appendChild(link);
+      link.click();
+
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 2000);
 
       toast({
         title: 'Download started',
