@@ -11,6 +11,8 @@ export interface Document {
   magic_link_id?: string | null;
   file_name: string;
   file_path: string;
+  original_file_name?: string | null;
+  is_pdf_original?: boolean | null;
   status: DocumentStatus;
   assigned_staff_id: string | null;
   assigned_at: string | null;
@@ -184,7 +186,14 @@ export const useDocuments = () => {
         return fail('Upload failed', `Storage upload failed: ${uploadError.message}`, uploadError);
       }
 
-      // 2) Create document record
+      // Extract original_file_name in format "fileA (X)" and check if PDF
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+      const isPdfOriginal = fileExtension === 'pdf';
+      const fileNameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+      // Keep the format as "fileA (X)" - base name with bracket number
+      const originalFileName = fileNameWithoutExt.trim();
+
+      // 2) Create document record with original_file_name and is_pdf_original
       const { data: docData, error: insertError } = await supabase
         .from('documents')
         .insert({
@@ -192,6 +201,8 @@ export const useDocuments = () => {
           file_name: file.name,
           file_path: filePath,
           status: 'pending',
+          original_file_name: originalFileName,
+          is_pdf_original: isPdfOriginal,
         })
         .select()
         .single();
@@ -325,7 +336,14 @@ export const useDocuments = () => {
         const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
         if (uploadError) throw uploadError;
 
-        // 2) Create document record
+        // Extract original_file_name in format "fileA (X)" and check if PDF
+        const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+        const isPdfOriginal = fileExtension === 'pdf';
+        const fileNameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+        // Keep the format as "fileA (X)" - base name with bracket number
+        const originalFileName = fileNameWithoutExt.trim();
+
+        // 2) Create document record with original_file_name and is_pdf_original
         const { data: docData, error: insertError } = await supabase
           .from('documents')
           .insert({
@@ -333,6 +351,8 @@ export const useDocuments = () => {
             file_name: file.name,
             file_path: filePath,
             status: 'pending',
+            original_file_name: originalFileName,
+            is_pdf_original: isPdfOriginal,
           })
           .select()
           .single();
