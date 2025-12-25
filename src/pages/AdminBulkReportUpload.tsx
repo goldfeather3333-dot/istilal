@@ -17,7 +17,9 @@ import {
   Clock, 
   FileWarning,
   Archive,
-  Loader2
+  Loader2,
+  Brain,
+  FileSearch
 } from 'lucide-react';
 import JSZip from 'jszip';
 
@@ -29,51 +31,31 @@ interface ReportFile {
   error?: string;
 }
 
-interface MappingResult {
+interface MappedReport {
   documentId: string;
   fileName: string;
   reportType: 'similarity' | 'ai';
-  success: boolean;
-  message?: string;
+  percentage: number | null;
+}
+
+interface UnmatchedReport {
+  fileName: string;
+  documentName: string | null;
+  reason: string;
 }
 
 interface ProcessingResult {
   success: boolean;
-  mapped: MappingResult[];
-  unmatched: { fileName: string; normalizedFilename: string; filePath: string }[];
-  needsReview: { documentId: string; reason: string }[];
+  mapped: MappedReport[];
+  unmatched: UnmatchedReport[];
   completedDocuments: string[];
   stats: {
     totalReports: number;
     mappedCount: number;
     unmatchedCount: number;
     completedCount: number;
-    needsReviewCount: number;
+    unknownTypeCount: number;
   };
-}
-
-/**
- * Normalize REPORT filename (removes extension + ONLY the LAST trailing " (number)").
- * This matches reports to customer documents that may have earlier brackets.
- * 
- * Examples:
- *   fileA1 (1).pdf → fileA1 (matches customer's "fileA1.pdf")
- *   fileA1 (1) (1).pdf → fileA1 (1) (matches customer's "fileA1 (1).pdf")
- *   fileA1 (1) (2).pdf → fileA1 (1) (matches customer's "fileA1 (1).pdf")
- *   fileA1.pdf → fileA1 (exact match for customer's "fileA1.pdf")
- */
-function normalizeReportFilename(filename: string): string {
-  let result = filename.toLowerCase();
-  // Remove file extension
-  result = result.replace(/\.[^.]+$/, '');
-  // Remove ONLY the last trailing " (number)" suffix - single pass
-  result = result.replace(/\s*\(\d+\)$/, '');
-  return result.trim();
-}
-
-// Alias for display purposes
-function normalizeFilename(filename: string): string {
-  return normalizeReportFilename(filename);
 }
 
 export default function AdminBulkReportUpload() {
@@ -187,7 +169,7 @@ export default function AdminBulkReportUpload() {
         return;
       }
 
-      const uploadedReports: { fileName: string; filePath: string; normalizedFilename: string }[] = [];
+      const uploadedReports: { fileName: string; filePath: string }[] = [];
       const totalFiles = files.length;
 
       // Upload each file to storage
@@ -220,7 +202,6 @@ export default function AdminBulkReportUpload() {
         uploadedReports.push({
           fileName: reportFile.fileName,
           filePath,
-          normalizedFilename: normalizeFilename(reportFile.fileName),
         });
 
         setUploadProgress(Math.round(((i + 1) / totalFiles) * 50));
@@ -232,10 +213,10 @@ export default function AdminBulkReportUpload() {
         return;
       }
 
-      // Call edge function for auto-mapping
+      // Call the new edge function for PDF-based auto-mapping
       setUploadProgress(60);
       
-      const { data, error } = await supabase.functions.invoke('bulk-report-upload', {
+      const { data, error } = await supabase.functions.invoke('process-bulk-reports', {
         body: { reports: uploadedReports },
       });
 
@@ -253,11 +234,14 @@ export default function AdminBulkReportUpload() {
       if (stats.completedCount > 0) {
         toast.success(`Successfully completed ${stats.completedCount} documents!`);
       }
+      if (stats.mappedCount > 0) {
+        toast.success(`Mapped ${stats.mappedCount} reports to documents`);
+      }
       if (stats.unmatchedCount > 0) {
         toast.warning(`${stats.unmatchedCount} reports could not be matched`);
       }
-      if (stats.needsReviewCount > 0) {
-        toast.warning(`${stats.needsReviewCount} documents need manual review`);
+      if (stats.unknownTypeCount > 0) {
+        toast.warning(`${stats.unknownTypeCount} reports have unknown type`);
       }
 
     } catch (error) {
@@ -277,8 +261,34 @@ export default function AdminBulkReportUpload() {
       <div className="space-y-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Bulk Report Upload</h1>
-          <p className="text-muted-foreground">Upload multiple PDF reports at once for automatic document matching</p>
+          <p className="text-muted-foreground">
+            Upload PDF reports for automatic document matching using AI-powered content extraction
+          </p>
         </div>
+
+        {/* How It Works */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              How It Works
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex items-start gap-2">
+              <FileSearch className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <p><strong>Page 1:</strong> Document name is extracted from the cover page</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <FileText className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <p><strong>Page 2:</strong> Report type (Similarity/AI) and percentage are extracted</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <p><strong>Matching:</strong> Reports are matched to documents by extracted name, not filename</p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Upload Area */}
         <Card>
@@ -288,7 +298,7 @@ export default function AdminBulkReportUpload() {
               Upload Reports
             </CardTitle>
             <CardDescription>
-              Drag and drop PDF files or ZIP archives. Reports will be automatically matched to documents based on filename.
+              Drag and drop PDF files or ZIP archives containing reports
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -363,12 +373,7 @@ export default function AdminBulkReportUpload() {
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{file.fileName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Normalized: {normalizeFilename(file.fileName)}
-                            </p>
-                          </div>
+                          <p className="text-sm font-medium truncate">{file.fileName}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           {file.status === 'pending' && (
@@ -415,7 +420,7 @@ export default function AdminBulkReportUpload() {
                 {processing && (
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Processing...</span>
+                      <span className="text-sm font-medium">Processing PDFs...</span>
                       <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
                     </div>
                     <Progress value={uploadProgress} />
@@ -453,7 +458,7 @@ export default function AdminBulkReportUpload() {
             <CardHeader>
               <CardTitle>Processing Results</CardTitle>
               <CardDescription>
-                Summary of the auto-mapping process
+                Summary of the PDF-based auto-mapping process
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -475,9 +480,9 @@ export default function AdminBulkReportUpload() {
                   <p className="text-2xl font-bold text-yellow-600">{processingResult.stats.unmatchedCount}</p>
                   <p className="text-sm text-muted-foreground">Unmatched</p>
                 </div>
-                <div className="text-center p-4 bg-red-500/10 rounded-lg">
-                  <p className="text-2xl font-bold text-red-600">{processingResult.stats.needsReviewCount}</p>
-                  <p className="text-sm text-muted-foreground">Needs Review</p>
+                <div className="text-center p-4 bg-orange-500/10 rounded-lg">
+                  <p className="text-2xl font-bold text-orange-600">{processingResult.stats.unknownTypeCount}</p>
+                  <p className="text-sm text-muted-foreground">Unknown Type</p>
                 </div>
               </div>
 
@@ -495,9 +500,16 @@ export default function AdminBulkReportUpload() {
                       {processingResult.mapped.map((item, index) => (
                         <div key={index} className="flex items-center justify-between p-2 bg-green-500/5 rounded">
                           <span className="text-sm truncate flex-1">{item.fileName}</span>
-                          <Badge variant="outline" className="ml-2">
-                            {item.reportType === 'similarity' ? 'Similarity' : 'AI'} Report
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="ml-2">
+                              {item.reportType === 'similarity' ? 'Similarity' : 'AI'} Report
+                            </Badge>
+                            {item.percentage !== null && (
+                              <Badge variant="secondary">
+                                {item.percentage}%
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -507,42 +519,23 @@ export default function AdminBulkReportUpload() {
 
               {/* Unmatched Reports */}
               {processingResult.unmatched.length > 0 && (
-                <div className="mb-6">
+                <div>
                   <h4 className="font-medium mb-3 flex items-center gap-2">
                     <FileWarning className="h-4 w-4 text-yellow-600" />
-                    Unmatched Reports ({processingResult.unmatched.length})
+                    Unmatched / Flagged for Review ({processingResult.unmatched.length})
                   </h4>
                   <ScrollArea className="h-[150px] border rounded-lg">
                     <div className="p-3 space-y-2">
                       {processingResult.unmatched.map((item, index) => (
                         <div key={index} className="flex items-center justify-between p-2 bg-yellow-500/5 rounded">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm truncate">{item.fileName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Normalized: {item.normalizedFilename}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {/* Needs Review */}
-              {processingResult.needsReview.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-3 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    Needs Manual Review ({processingResult.needsReview.length})
-                  </h4>
-                  <ScrollArea className="h-[150px] border rounded-lg">
-                    <div className="p-3 space-y-2">
-                      {processingResult.needsReview.map((item, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-red-500/5 rounded">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-mono">{item.documentId.slice(0, 8)}...</p>
-                            <p className="text-xs text-muted-foreground">{item.reason}</p>
+                            <p className="text-sm truncate font-medium">{item.fileName}</p>
+                            {item.documentName && (
+                              <p className="text-xs text-muted-foreground">
+                                Detected document: {item.documentName}
+                              </p>
+                            )}
+                            <p className="text-xs text-destructive">{item.reason}</p>
                           </div>
                         </div>
                       ))}

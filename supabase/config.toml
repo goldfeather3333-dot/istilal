@@ -1,1 +1,4 @@
 project_id = "nfdbbegejctajpfzaxfi"
+
+[functions.process-bulk-reports]
+verify_jwt = false
