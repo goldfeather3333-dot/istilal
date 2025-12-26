@@ -51,10 +51,10 @@ export const DashboardHeader: React.FC = () => {
         {/* Left side - Logo */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">P</span>
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-sm">I</span>
             </div>
-            <span className="font-display font-semibold text-lg hidden sm:block">PlagiScans</span>
+            <span className="font-display font-semibold text-lg hidden sm:block bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Istilal</span>
           </div>
         </div>
 

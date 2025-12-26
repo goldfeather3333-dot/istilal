@@ -243,10 +243,10 @@ export default function Auth() {
         <div className="w-full max-w-md animate-fade-in">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-4">
-              <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
-                <FileCheck className="h-6 w-6 text-primary-foreground" />
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                <FileCheck className="h-6 w-6 text-white" />
               </div>
-              <span className="font-display font-bold text-2xl">PlagaiScans</span>
+              <span className="font-display font-bold text-2xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Istilal</span>
             </div>
             <p className="text-muted-foreground">Set your new password</p>
           </div>
@@ -324,10 +324,10 @@ export default function Auth() {
         <div className="w-full max-w-md animate-fade-in">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-4">
-              <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
-                <FileCheck className="h-6 w-6 text-primary-foreground" />
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                <FileCheck className="h-6 w-6 text-white" />
               </div>
-              <span className="font-display font-bold text-2xl">PlagaiScans</span>
+              <span className="font-display font-bold text-2xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Istilal</span>
             </div>
             <p className="text-muted-foreground">Reset your password</p>
           </div>
@@ -373,16 +373,16 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md animate-fade-in">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
-              <FileCheck className="h-6 w-6 text-primary-foreground" />
+        <div className="w-full max-w-md animate-fade-in">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 mb-4">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                <FileCheck className="h-6 w-6 text-white" />
+              </div>
+              <span className="font-display font-bold text-2xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Istilal</span>
             </div>
-            <span className="font-display font-bold text-2xl">PlagaiScans</span>
+            <p className="text-muted-foreground">Document Similarity & AI Detection Platform</p>
           </div>
-          <p className="text-muted-foreground">Document Plagiarism & AI Detection Platform</p>
-        </div>
 
         <Card>
           <Tabs defaultValue="login">

@@ -136,56 +136,56 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {role === 'customer' && (
-            <Card>
+            <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-r from-emerald-50/50 to-transparent dark:from-emerald-950/20">
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <CreditCard className="h-6 w-6 text-primary" />
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                    <CreditCard className="h-6 w-6 text-white" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Credit Balance</p>
-                    <p className="text-2xl font-bold">{profile?.credit_balance || 0}</p>
+                    <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{profile?.credit_balance || 0}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
-          <Card>
+          <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-950/20">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-accent" />
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+                  <Clock className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Pending</p>
-                  <p className="text-2xl font-bold">{stats.pending}</p>
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.pending}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-950/20">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-primary" />
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                  <FileText className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">In Progress</p>
-                  <p className="text-2xl font-bold">{stats.inProgress}</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.inProgress}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           {role !== 'staff' && (
-            <Card>
+            <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50/50 to-transparent dark:from-green-950/20">
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-lg bg-secondary/10 flex items-center justify-center">
-                    <CheckCircle className="h-6 w-6 text-secondary" />
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                    <CheckCircle className="h-6 w-6 text-white" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Completed</p>
-                    <p className="text-2xl font-bold">{stats.completed}</p>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.completed}</p>
                   </div>
                 </div>
               </CardContent>
@@ -232,11 +232,11 @@ export default function Dashboard() {
         {/* Quick Actions */}
         {role === 'customer' && (
           <div className="grid md:grid-cols-2 gap-4">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <Card className="hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-300 cursor-pointer group">
               <Link to="/dashboard/upload">
                 <CardContent className="p-6 flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-xl gradient-primary flex items-center justify-center">
-                    <Upload className="h-7 w-7 text-primary-foreground" />
+                  <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <Upload className="h-7 w-7 text-white" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">Upload Document</h3>
@@ -247,11 +247,11 @@ export default function Dashboard() {
                 </CardContent>
               </Link>
             </Card>
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <Card className="hover:border-teal-500/50 hover:shadow-lg hover:shadow-teal-500/10 transition-all duration-300 cursor-pointer group">
               <Link to="/dashboard/credits">
                 <CardContent className="p-6 flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-xl gradient-success flex items-center justify-center">
-                    <CreditCard className="h-7 w-7 text-secondary-foreground" />
+                  <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <CreditCard className="h-7 w-7 text-white" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">Buy Credits</h3>
