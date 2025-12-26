@@ -63,7 +63,7 @@ export const InstallPromptBanner = () => {
             <Smartphone className="w-6 h-6 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground">Install PlagaiScans</h3>
+            <h3 className="font-semibold text-foreground">Install Istilal</h3>
             <p className="text-sm text-muted-foreground mt-0.5">
               {isIOS 
                 ? 'Tap Share then "Add to Home Screen" for the best experience'

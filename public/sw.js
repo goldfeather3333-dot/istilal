@@ -3,7 +3,7 @@
 // Offline page is NEVER served for HTML/page loads
 
 const SW_VERSION = 'v5';
-const STATIC_CACHE_NAME = `plagaiscans-static-${SW_VERSION}`;
+const STATIC_CACHE_NAME = `istilal-static-${SW_VERSION}`;
 
 // Only cache static assets (not HTML)
 const STATIC_ASSETS = [
@@ -119,7 +119,7 @@ self.addEventListener('push', (event) => {
   console.log(`[SW ${SW_VERSION}] Push received`);
 
   let data = {
-    title: 'PlagaiScans',
+    title: 'Istilal',
     body: 'You have a new notification',
     icon: '/pwa-icon-192.png',
     badge: '/pwa-icon-192.png',
