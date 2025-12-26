@@ -34,8 +34,8 @@ export default defineConfig(({ mode }) => ({
         'offline.html',
       ],
       manifest: {
-        name: "Plagaiscans",
-        short_name: "Plagaiscans",
+        name: "Istilal",
+        short_name: "Istilal",
         description: "Professional AI-assisted similarity analysis and plagiarism detection service",
         theme_color: "#0f172a",
         background_color: "#ffffff",
