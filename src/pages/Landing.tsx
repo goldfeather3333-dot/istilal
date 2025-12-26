@@ -180,7 +180,7 @@ const Landing = () => {
               <div className="flex flex-wrap gap-4">
                 <Link to="/auth">
                   <Button size="lg" className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl px-8 h-14 text-lg shadow-xl shadow-emerald-500/25 group">
-                    Start Free Trial
+                    Get Started
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
