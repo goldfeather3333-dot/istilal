@@ -49,7 +49,7 @@ async function getSendPlusToken(): Promise<string> {
   return data.access_token;
 }
 
-// Send email using SendPlus SMTP API
+// Send email using SendPlus SMTP API - sends individually to protect privacy
 async function sendEmail(
   token: string,
   fromEmail: string,
@@ -60,45 +60,57 @@ async function sendEmail(
   let successCount = 0;
   let failedCount = 0;
 
-  // SendPlus SMTP API - send in batches
-  const batchSize = 50;
+  // SendPlus SMTP API - send individually to each recipient for privacy
+  // This ensures no recipient can see other recipients' email addresses
+  const batchSize = 10; // Process 10 individual emails at a time for rate limiting
   
   for (let i = 0; i < toEmails.length; i += batchSize) {
     const batch = toEmails.slice(i, i + batchSize);
     
-    try {
-      const response = await fetch("https://api.sendpulse.com/smtp/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          email: {
-            html: htmlContent,
-            text: htmlContent.replace(/<[^>]*>/g, ''),
-            subject: subject,
-            from: {
-              name: "PlagaiScans",
-              email: fromEmail
-            },
-            to: batch.map(email => ({ email }))
-          }
-        })
-      });
+    // Send each email individually within the batch
+    const promises = batch.map(async (recipientEmail) => {
+      try {
+        const response = await fetch("https://api.sendpulse.com/smtp/emails", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            email: {
+              html: htmlContent,
+              text: htmlContent.replace(/<[^>]*>/g, ''),
+              subject: subject,
+              from: {
+                name: "Istilal",
+                email: fromEmail
+              },
+              // Send to ONE recipient only - this protects privacy
+              to: [{ email: recipientEmail }]
+            }
+          })
+        });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log("SendPlus batch response:", result);
-        successCount += batch.length;
-      } else {
-        const error = await response.text();
-        console.error("SendPlus send error:", error);
-        failedCount += batch.length;
+        if (response.ok) {
+          return { success: true };
+        } else {
+          const error = await response.text();
+          console.error(`SendPlus send error for ${recipientEmail}:`, error);
+          return { success: false };
+        }
+      } catch (error) {
+        console.error(`Error sending to ${recipientEmail}:`, error);
+        return { success: false };
       }
-    } catch (error) {
-      console.error("Batch send error:", error);
-      failedCount += batch.length;
+    });
+
+    const results = await Promise.all(promises);
+    successCount += results.filter(r => r.success).length;
+    failedCount += results.filter(r => !r.success).length;
+    
+    // Small delay between batches to avoid rate limiting
+    if (i + batchSize < toEmails.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
 
@@ -195,8 +207,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Sending emails to ${emails.length} recipients via SendPlus`);
 
-    const siteUrl = "https://plagaiscans.com";
-    const fromEmail = Deno.env.get("SENDPLUS_FROM_EMAIL") || "noreply@plagaiscans.com";
+    const siteUrl = "https://istilal.com";
+    const fromEmail = Deno.env.get("SENDPLUS_FROM_EMAIL") || "noreply@istilal.com";
 
     // Get icon based on email type
     const typeIcons: Record<string, string> = {
@@ -219,7 +231,7 @@ const handler = async (req: Request): Promise<Response> => {
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
           <div style="background-color: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;">
+              <div style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;">
                 <span style="color: white; font-size: 28px;">${typeIcons[type] || '📧'}</span>
               </div>
             </div>
@@ -233,7 +245,7 @@ const handler = async (req: Request): Promise<Response> => {
             ${ctaText && ctaUrl ? `
             <div style="text-align: center; margin-bottom: 30px;">
               <a href="${ctaUrl}" 
-                 style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">
+                 style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">
                 ${ctaText}
               </a>
             </div>
@@ -242,8 +254,8 @@ const handler = async (req: Request): Promise<Response> => {
             <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 30px 0;">
             
             <p style="color: #a1a1aa; text-align: center; margin: 0; font-size: 12px;">
-              This email was sent from PlagaiScans.<br>
-              <a href="${siteUrl}" style="color: #3b82f6; text-decoration: none;">Visit our website</a>
+              This email was sent from Istilal.<br>
+              <a href="${siteUrl}" style="color: #10b981; text-decoration: none;">Visit our website</a>
             </p>
           </div>
         </div>

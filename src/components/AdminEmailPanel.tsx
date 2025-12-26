@@ -107,39 +107,39 @@ const audienceConfig: Record<TargetAudience, { label: string; description: strin
 
 const emailTemplates: Record<EmailType, { subject: string; title: string; message: string; ctaText: string; ctaUrl: string }> = {
   announcement: {
-    subject: 'Important Announcement from PlagaiScans',
+    subject: 'Important Announcement from Istilal',
     title: 'Important Update',
     message: 'We have an important announcement to share with you.\n\nPlease read this carefully as it may affect your experience with our service.',
     ctaText: 'Learn More',
-    ctaUrl: 'https://plagaiscans.com'
+    ctaUrl: 'https://istilal.com'
   },
   payment_reminder: {
-    subject: 'Complete Your Payment - PlagaiScans',
+    subject: 'Complete Your Payment - Istilal',
     title: 'Payment Reminder',
     message: 'You have a pending payment or low credit balance.\n\nPlease complete your payment to continue using our document scanning services without interruption.',
     ctaText: 'Buy Credits Now',
-    ctaUrl: 'https://plagaiscans.com/dashboard/credits'
+    ctaUrl: 'https://istilal.com/dashboard/credits'
   },
   document_status: {
-    subject: 'Your Document Status Update - PlagaiScans',
+    subject: 'Your Document Status Update - Istilal',
     title: 'Document Processing Update',
     message: 'We wanted to update you on the status of your submitted documents.\n\nYour documents are being processed and you will receive the results shortly.',
     ctaText: 'View Documents',
-    ctaUrl: 'https://plagaiscans.com/dashboard/documents'
+    ctaUrl: 'https://istilal.com/dashboard/documents'
   },
   promotional: {
-    subject: '🎉 Special Offer Just For You! - PlagaiScans',
+    subject: '🎉 Special Offer Just For You! - Istilal',
     title: 'Exclusive Offer',
     message: 'We have a special offer just for you!\n\nFor a limited time, get extra credits when you make a purchase. Don\'t miss this opportunity!',
     ctaText: 'Claim Offer',
-    ctaUrl: 'https://plagaiscans.com/dashboard/credits'
+    ctaUrl: 'https://istilal.com/dashboard/credits'
   },
   welcome: {
-    subject: 'Welcome to PlagaiScans! 👋',
+    subject: 'Welcome to Istilal! 👋',
     title: 'Welcome Aboard!',
-    message: 'Thank you for joining PlagaiScans!\n\nWe\'re excited to have you with us. Our platform helps you check documents for plagiarism and AI content with accurate results.\n\nGet started by uploading your first document.',
+    message: 'Thank you for joining Istilal!\n\nWe\'re excited to have you with us. Our platform helps you check documents for plagiarism and AI content with accurate results.\n\nGet started by uploading your first document.',
     ctaText: 'Get Started',
-    ctaUrl: 'https://plagaiscans.com/dashboard'
+    ctaUrl: 'https://istilal.com/dashboard'
   },
   custom: {
     subject: '',
@@ -378,8 +378,8 @@ export const AdminEmailPanel: React.FC = () => {
           )}
           <hr className="my-4" />
           <p className="text-xs text-center text-muted-foreground">
-            This email was sent from PlagaiScans.<br />
-            <a href="#" className="text-blue-500">Visit our website</a>
+            This email was sent from Istilal.<br />
+            <a href="#" className="text-emerald-500">Visit our website</a>
           </p>
         </div>
       </div>
