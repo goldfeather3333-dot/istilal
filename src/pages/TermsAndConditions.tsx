@@ -13,7 +13,7 @@ const TermsAndConditions = () => {
               <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-semibold text-gray-900">PlagaiScans</span>
+              <span className="text-xl font-semibold text-gray-900">Istilal</span>
             </Link>
             <Link to="/">
               <Button variant="ghost" className="gap-2">
@@ -33,28 +33,28 @@ const TermsAndConditions = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
             <p className="text-gray-600 leading-relaxed">
-              Welcome to Plagaiscans. These Terms and Conditions govern your use of our website and services. 
+              Welcome to Istilal. These Terms and Conditions govern your use of our website and services. 
               By accessing or using our platform, you agree to be bound by these terms. If you do not agree 
               with any part of these terms, please do not use our services.
             </p>
             <p className="text-gray-600 leading-relaxed mt-4">
-              <strong>These services are provided by Goldfeather Prem Ltd (UK), operating under the brand name Plagaiscans.</strong>
+              <strong>These services are provided by Istilal, an academic integrity platform focused on plagiarism and similarity checking.</strong>
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Description of Services</h2>
             <p className="text-gray-600 leading-relaxed">
-              Plagaiscans provides AI-assisted document analysis services, including:
+              Istilal provides academic integrity services, including:
             </p>
             <ul className="list-disc pl-6 text-gray-600 space-y-2 mt-4">
-              <li>Similarity detection comparing documents against academic and web sources</li>
-              <li>AI content detection to identify machine-generated text</li>
-              <li>Detailed analysis reports in PDF format</li>
-              <li>Educational tools for academic integrity verification</li>
+              <li>Plagiarism and similarity detection comparing documents against academic and web sources</li>
+              <li>AI content detection indicators to evaluate AI-generated text</li>
+              <li>Detailed analysis reports with source insights in PDF format</li>
+              <li>Citation and reference checks for academic compliance</li>
             </ul>
             <p className="text-gray-600 leading-relaxed mt-4">
-              Our services are designed to assist with educational similarity analysis and should be used 
+              Our services are designed to assist with academic integrity verification and should be used 
               as a supplementary tool, not as the sole determinant of document authenticity.
             </p>
           </section>
@@ -127,7 +127,7 @@ const TermsAndConditions = () => {
               To the maximum extent permitted by law:
             </p>
             <ul className="list-disc pl-6 text-gray-600 space-y-2 mt-4">
-              <li>Plagaiscans provides services "as is" without warranties of any kind</li>
+              <li>Istilal provides services "as is" without warranties of any kind</li>
               <li>We do not guarantee that our analysis will detect all instances of similarity or AI content</li>
               <li>We are not liable for any decisions made based on our reports</li>
               <li>Our maximum liability shall not exceed the amount paid for the specific service</li>
@@ -143,7 +143,7 @@ const TermsAndConditions = () => {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Intellectual Property</h2>
             <p className="text-gray-600 leading-relaxed">
               All content, trademarks, and intellectual property on this platform are owned by 
-              Goldfeather Prem Ltd unless otherwise stated. You retain ownership of documents you 
+              Istilal unless otherwise stated. You retain ownership of documents you 
               submit but grant us a limited license to process them for service delivery.
             </p>
           </section>
@@ -159,8 +159,8 @@ const TermsAndConditions = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Governing Law</h2>
             <p className="text-gray-600 leading-relaxed">
-              These terms are governed by the laws of the United Kingdom. Any disputes shall be 
-              resolved in the courts of the United Kingdom.
+              These terms are governed by applicable laws. Any disputes shall be 
+              resolved through appropriate legal channels.
             </p>
           </section>
 
@@ -168,12 +168,9 @@ const TermsAndConditions = () => {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">Contact Information</h2>
             <p className="text-gray-600">
               For questions about these Terms and Conditions, please contact us at:{" "}
-              <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">
-                support@plagaiscans.com
+              <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">
+                support@istilal.com
               </a>
-            </p>
-            <p className="text-gray-600 mt-2">
-              Goldfeather Prem Ltd, United Kingdom
             </p>
           </section>
         </div>
@@ -183,13 +180,13 @@ const TermsAndConditions = () => {
       <footer className="py-8 px-4 border-t border-gray-100 bg-white mt-16">
         <div className="max-w-6xl mx-auto text-center space-y-2">
           <p className="text-gray-600 text-sm">
-            © {new Date().getFullYear()} Plagaiscans. All rights reserved.
+            © {new Date().getFullYear()} Istilal. All rights reserved.
           </p>
           <p className="text-gray-500 text-xs">
-            Plagaiscans is operated by Goldfeather Prem Ltd (United Kingdom)
+            Check originality. Protect academic integrity.
           </p>
           <p className="text-gray-500 text-xs">
-            Contact: <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">support@plagaiscans.com</a>
+            Contact: <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">support@istilal.com</a>
           </p>
         </div>
       </footer>

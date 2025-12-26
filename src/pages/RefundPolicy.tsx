@@ -14,7 +14,7 @@ const RefundPolicy = () => {
               <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-semibold text-gray-900">PlagaiScans</span>
+              <span className="text-xl font-semibold text-gray-900">Istilal</span>
             </Link>
             <Link to="/">
               <Button variant="ghost" className="gap-2">
@@ -69,7 +69,7 @@ const RefundPolicy = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Digital Credits Policy</h2>
             <p className="text-gray-600 leading-relaxed">
-              Plagaiscans operates on a credit-based system for document analysis services. Please 
+              Istilal operates on a credit-based system for document analysis services. Please 
               understand the following regarding credits and refunds:
             </p>
             
@@ -162,8 +162,8 @@ const RefundPolicy = () => {
             <ol className="list-decimal pl-6 text-gray-600 space-y-3 mt-4">
               <li>
                 <strong>Contact Support:</strong> Email{" "}
-                <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">
-                  support@plagaiscans.com
+                <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">
+                  support@istilal.com
                 </a>{" "}
                 with the subject line "Refund Request"
               </li>
@@ -215,12 +215,9 @@ const RefundPolicy = () => {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">Contact Us</h2>
             <p className="text-gray-600">
               For refund requests or questions about this policy, contact:{" "}
-              <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">
-                support@plagaiscans.com
+              <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">
+                support@istilal.com
               </a>
-            </p>
-            <p className="text-gray-600 mt-2">
-              Goldfeather Prem Ltd, United Kingdom
             </p>
             <p className="text-gray-500 text-sm mt-4">
               Response time: Within 1-2 business days
@@ -233,13 +230,13 @@ const RefundPolicy = () => {
       <footer className="py-8 px-4 border-t border-gray-100 bg-white mt-16">
         <div className="max-w-6xl mx-auto text-center space-y-2">
           <p className="text-gray-600 text-sm">
-            © {new Date().getFullYear()} Plagaiscans. All rights reserved.
+            © {new Date().getFullYear()} Istilal. All rights reserved.
           </p>
           <p className="text-gray-500 text-xs">
-            Plagaiscans is operated by Goldfeather Prem Ltd (United Kingdom)
+            Check originality. Protect academic integrity.
           </p>
           <p className="text-gray-500 text-xs">
-            Contact: <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">support@plagaiscans.com</a>
+            Contact: <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">support@istilal.com</a>
           </p>
         </div>
       </footer>

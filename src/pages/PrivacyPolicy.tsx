@@ -13,7 +13,7 @@ const PrivacyPolicy = () => {
               <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-semibold text-gray-900">PlagaiScans</span>
+              <span className="text-xl font-semibold text-gray-900">Istilal</span>
             </Link>
             <Link to="/">
               <Button variant="ghost" className="gap-2">
@@ -33,12 +33,12 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Data Controller</h2>
             <p className="text-gray-600 leading-relaxed">
-              <strong>Goldfeather Prem Ltd</strong> (operating as Plagaiscans) is the data controller 
-              responsible for your personal data. We are committed to protecting your privacy and 
-              handling your data in accordance with the UK GDPR and applicable data protection laws.
+              <strong>Istilal</strong> is the data controller responsible for your personal data. 
+              We are committed to protecting your privacy and handling your data in accordance 
+              with applicable data protection laws.
             </p>
             <p className="text-gray-600 leading-relaxed mt-4">
-              Contact: <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">support@plagaiscans.com</a>
+              Contact: <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">support@istilal.com</a>
             </p>
           </section>
 
@@ -138,7 +138,7 @@ const PrivacyPolicy = () => {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Your Rights (GDPR)</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Your Rights</h2>
             <p className="text-gray-600 leading-relaxed">
               Under data protection law, you have the following rights:
             </p>
@@ -153,8 +153,8 @@ const PrivacyPolicy = () => {
             </ul>
             <p className="text-gray-600 leading-relaxed mt-4">
               To exercise these rights, contact us at{" "}
-              <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">
-                support@plagaiscans.com
+              <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">
+                support@istilal.com
               </a>
             </p>
           </section>
@@ -184,9 +184,8 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. International Transfers</h2>
             <p className="text-gray-600 leading-relaxed">
-              Your data may be processed in countries outside the UK/EEA. When this occurs, we 
-              ensure appropriate safeguards are in place, such as Standard Contractual Clauses 
-              approved by the European Commission.
+              Your data may be processed in countries outside your jurisdiction. When this occurs, we 
+              ensure appropriate safeguards are in place to protect your data.
             </p>
           </section>
 
@@ -203,13 +202,9 @@ const PrivacyPolicy = () => {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">Contact Us</h2>
             <p className="text-gray-600">
               For privacy-related inquiries, please contact:{" "}
-              <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">
-                support@plagaiscans.com
+              <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">
+                support@istilal.com
               </a>
-            </p>
-            <p className="text-gray-600 mt-2">
-              Goldfeather Prem Ltd (Data Controller)<br />
-              United Kingdom
             </p>
           </section>
         </div>
@@ -219,13 +214,13 @@ const PrivacyPolicy = () => {
       <footer className="py-8 px-4 border-t border-gray-100 bg-white mt-16">
         <div className="max-w-6xl mx-auto text-center space-y-2">
           <p className="text-gray-600 text-sm">
-            © {new Date().getFullYear()} Plagaiscans. All rights reserved.
+            © {new Date().getFullYear()} Istilal. All rights reserved.
           </p>
           <p className="text-gray-500 text-xs">
-            Plagaiscans is operated by Goldfeather Prem Ltd (United Kingdom)
+            Check originality. Protect academic integrity.
           </p>
           <p className="text-gray-500 text-xs">
-            Contact: <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">support@plagaiscans.com</a>
+            Contact: <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">support@istilal.com</a>
           </p>
         </div>
       </footer>

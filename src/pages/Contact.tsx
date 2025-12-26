@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Contact = () => {
   const openWhatsApp = () => {
-    const message = encodeURIComponent("Hello! I need support with Plagaiscans.");
+    const message = encodeURIComponent("Hello! I need support with Istilal.");
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
@@ -19,7 +19,7 @@ const Contact = () => {
               <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-semibold text-gray-900">PlagaiScans</span>
+              <span className="text-xl font-semibold text-gray-900">Istilal</span>
             </Link>
             <Link to="/">
               <Button variant="ghost" className="gap-2">
@@ -53,10 +53,10 @@ const Contact = () => {
             </CardHeader>
             <CardContent>
               <a 
-                href="mailto:support@plagaiscans.com" 
+                href="mailto:support@istilal.com" 
                 className="text-blue-700 text-lg font-medium hover:underline"
               >
-                support@plagaiscans.com
+                support@istilal.com
               </a>
               <p className="text-gray-600 mt-3 text-sm">
                 For detailed inquiries, refund requests, account issues, and general support.
@@ -176,12 +176,11 @@ const Contact = () => {
         {/* Company Info */}
         <Card className="bg-gray-50">
           <CardContent className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Company Information</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">Contact Information</h3>
             <div className="space-y-2 text-gray-600 text-sm">
-              <p><strong>Brand:</strong> Plagaiscans</p>
-              <p><strong>Operated by:</strong> Goldfeather Prem Ltd</p>
-              <p><strong>Country:</strong> United Kingdom</p>
-              <p><strong>Email:</strong> support@plagaiscans.com</p>
+              <p><strong>Platform:</strong> Istilal</p>
+              <p><strong>Website:</strong> istilal.com</p>
+              <p><strong>Email:</strong> support@istilal.com</p>
             </div>
           </CardContent>
         </Card>
@@ -191,13 +190,13 @@ const Contact = () => {
       <footer className="py-8 px-4 border-t border-gray-100 bg-white mt-16">
         <div className="max-w-6xl mx-auto text-center space-y-2">
           <p className="text-gray-600 text-sm">
-            © {new Date().getFullYear()} Plagaiscans. All rights reserved.
+            © {new Date().getFullYear()} Istilal. All rights reserved.
           </p>
           <p className="text-gray-500 text-xs">
-            Plagaiscans is operated by Goldfeather Prem Ltd (United Kingdom)
+            Check originality. Protect academic integrity.
           </p>
           <p className="text-gray-500 text-xs">
-            Contact: <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">support@plagaiscans.com</a>
+            Contact: <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">support@istilal.com</a>
           </p>
         </div>
       </footer>

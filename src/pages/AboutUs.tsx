@@ -14,7 +14,7 @@ const AboutUs = () => {
               <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-semibold text-gray-900">PlagaiScans</span>
+              <span className="text-xl font-semibold text-gray-900">Istilal</span>
             </Link>
             <Link to="/">
               <Button variant="ghost" className="gap-2">
@@ -27,20 +27,19 @@ const AboutUs = () => {
       </nav>
 
       <main className="max-w-4xl mx-auto px-4 py-16">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">About Plagaiscans</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-8">About Istilal</h1>
 
         <div className="prose prose-gray max-w-none space-y-8">
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">Who We Are</h2>
             <p className="text-gray-600 leading-relaxed">
-              Plagaiscans is a professional document analysis platform providing AI-assisted similarity detection 
-              and plagiarism analysis services. We serve students, educators, researchers, and businesses worldwide 
-              who require reliable document authenticity verification.
+              Istilal is an academic integrity platform focused on plagiarism and similarity checking. 
+              We help students, researchers, and faculty verify text originality, identify overlapping 
+              sections, and understand similarity sources through clear, easy-to-read reports.
             </p>
             <p className="text-gray-600 leading-relaxed mt-4">
-              <strong>Plagaiscans is a brand operated by Goldfeather Prem Ltd</strong>, a company registered 
-              in the <strong>United Kingdom</strong>. We are committed to providing transparent, reliable, 
-              and secure document analysis services to our global customer base.
+              Istilal also supports optional AI-content detection indicators to help users evaluate 
+              whether text may include AI-generated writing, aligned with academic integrity needs.
             </p>
           </section>
 
@@ -56,8 +55,8 @@ const AboutUs = () => {
                     <h3 className="font-semibold text-gray-900">Similarity Detection</h3>
                   </div>
                   <p className="text-gray-600 text-sm">
-                    Advanced analysis comparing documents against billions of academic papers, websites, 
-                    and publications from multiple sources.
+                    Detailed similarity reports with source insights. Identify overlapping text 
+                    and improve originality with citation and reference checks for academic compliance.
                   </p>
                 </CardContent>
               </Card>
@@ -68,11 +67,11 @@ const AboutUs = () => {
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                       <Shield className="w-5 h-5 text-blue-700" />
                     </div>
-                    <h3 className="font-semibold text-gray-900">AI Content Detection</h3>
+                    <h3 className="font-semibold text-gray-900">AI Content Indicators</h3>
                   </div>
                   <p className="text-gray-600 text-sm">
-                    Identify AI-generated content from various AI writing tools including ChatGPT, 
-                    Claude, and other language models.
+                    Optional AI-content detection indicators to help evaluate whether text may 
+                    include AI-generated writing from various AI tools.
                   </p>
                 </CardContent>
               </Card>
@@ -85,10 +84,10 @@ const AboutUs = () => {
               <div className="flex items-start gap-3">
                 <Shield className="w-5 h-5 text-blue-700 mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Privacy & Security</h3>
+                  <h3 className="font-semibold text-gray-900">Privacy-First Scanning</h3>
                   <p className="text-gray-600 text-sm">
                     Your documents are encrypted during transfer and processing. We implement strict 
-                    data protection measures in compliance with GDPR standards.
+                    data protection measures to ensure your work remains confidential.
                   </p>
                 </div>
               </div>
@@ -109,8 +108,8 @@ const AboutUs = () => {
                 <div>
                   <h3 className="font-semibold text-gray-900">Global Service</h3>
                   <p className="text-gray-600 text-sm">
-                    We provide our document analysis services to customers worldwide, with support for 
-                    multiple document formats and languages.
+                    We provide our document analysis services to students, researchers, and universities 
+                    worldwide, with support for multiple document formats and languages.
                   </p>
                 </div>
               </div>
@@ -118,16 +117,15 @@ const AboutUs = () => {
           </section>
 
           <section className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Company Information</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Contact Information</h2>
             <div className="space-y-3 text-gray-600">
-              <p><strong>Brand Name:</strong> Plagaiscans</p>
-              <p><strong>Operated by:</strong> Goldfeather Prem Ltd</p>
-              <p><strong>Country:</strong> United Kingdom</p>
+              <p><strong>Platform:</strong> Istilal</p>
+              <p><strong>Website:</strong> istilal.com</p>
               <p className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 <strong>Contact:</strong>{" "}
-                <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">
-                  support@plagaiscans.com
+                <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">
+                  support@istilal.com
                 </a>
               </p>
             </div>
@@ -157,13 +155,13 @@ const AboutUs = () => {
       <footer className="py-8 px-4 border-t border-gray-100 bg-white mt-16">
         <div className="max-w-6xl mx-auto text-center space-y-2">
           <p className="text-gray-600 text-sm">
-            © {new Date().getFullYear()} Plagaiscans. All rights reserved.
+            © {new Date().getFullYear()} Istilal. All rights reserved.
           </p>
           <p className="text-gray-500 text-xs">
-            Plagaiscans is operated by Goldfeather Prem Ltd (United Kingdom)
+            Check originality. Protect academic integrity.
           </p>
           <p className="text-gray-500 text-xs">
-            Contact: <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">support@plagaiscans.com</a>
+            Contact: <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">support@istilal.com</a>
           </p>
         </div>
       </footer>
