@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,10 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 import {
   Table,
   TableBody,
@@ -30,9 +34,39 @@ interface ManualPayment {
 }
 
 export default function Dashboard() {
-  const { role, profile, user } = useAuth();
-  const { documents, downloadFile } = useDocuments();
+  const { role, profile, user, refreshProfile } = useAuth();
+  const { documents, downloadFile, fetchDocuments } = useDocuments();
   const [pendingPayments, setPendingPayments] = useState<ManualPayment[]>([]);
+  const isMobile = useIsMobile();
+
+  // Pull-to-refresh handler
+  const handleRefresh = useCallback(async () => {
+    try {
+      await Promise.all([
+        fetchDocuments?.(),
+        refreshProfile?.(),
+        // Refresh pending payments for customers
+        role === 'customer' && user ? (async () => {
+          const { data } = await supabase
+            .from('manual_payments')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(5);
+          if (data) setPendingPayments(data);
+        })() : Promise.resolve(),
+      ]);
+      toast.success('Data refreshed');
+    } catch (error) {
+      console.error('Refresh failed:', error);
+      toast.error('Failed to refresh data');
+    }
+  }, [fetchDocuments, refreshProfile, role, user]);
+
+  const { containerRef, pullDistance, progress, isRefreshing } = usePullToRefresh({
+    onRefresh: handleRefresh,
+    threshold: 80,
+  });
 
   const stats = {
     pending: documents.filter((d) => d.status === 'pending').length,
@@ -115,7 +149,24 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div 
+        ref={isMobile ? containerRef : undefined}
+        className="relative"
+        style={{
+          transform: isMobile && pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
+          transition: !isRefreshing && pullDistance === 0 ? 'transform 0.2s ease-out' : undefined,
+        }}
+      >
+        {/* Pull to Refresh Indicator - Mobile Only */}
+        {isMobile && (
+          <PullToRefreshIndicator
+            pullDistance={pullDistance}
+            progress={progress}
+            isRefreshing={isRefreshing}
+          />
+        )}
+        
+        <div className="space-y-8">
         {/* Announcements */}
         <AnnouncementBanner />
 
@@ -375,6 +426,7 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </DashboardLayout>
   );
