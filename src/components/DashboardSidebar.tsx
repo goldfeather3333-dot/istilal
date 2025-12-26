@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   FileText,
@@ -96,6 +97,7 @@ const setSeenCount = (key: keyof SeenCounts, count: number) => {
 };
 
 export const DashboardSidebar: React.FC = () => {
+  const { t } = useTranslation();
   const { role, profile, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -280,92 +282,92 @@ export const DashboardSidebar: React.FC = () => {
   }, []);
 
   const customerLinks: NavLink[] = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/dashboard/upload', icon: Upload, label: 'Upload Document' },
-    { to: '/dashboard/documents', icon: FileText, label: 'My Documents' },
-    { to: '/dashboard/analytics', icon: PieChart, label: 'Analytics' },
-    { to: '/dashboard/credits', icon: CreditCard, label: 'Buy Credits' },
-    { to: '/dashboard/payments', icon: Receipt, label: 'Payment History' },
-    { to: '/dashboard/profile', icon: User, label: 'Profile' },
+    { to: '/dashboard', icon: LayoutDashboard, label: t('sidebar.dashboard') },
+    { to: '/dashboard/upload', icon: Upload, label: t('sidebar.uploadDocument') },
+    { to: '/dashboard/documents', icon: FileText, label: t('sidebar.myDocuments') },
+    { to: '/dashboard/analytics', icon: PieChart, label: t('sidebar.analytics') },
+    { to: '/dashboard/credits', icon: CreditCard, label: t('sidebar.buyCredits') },
+    { to: '/dashboard/payments', icon: Receipt, label: t('sidebar.paymentHistory') },
+    { to: '/dashboard/profile', icon: User, label: t('sidebar.profile') },
   ];
 
   const staffLinks: NavLink[] = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/dashboard/queue', icon: FileCheck, label: 'Document Queue' },
-    { to: '/dashboard/my-work', icon: FileText, label: 'My Processed' },
-    { to: '/dashboard/stats', icon: BarChart3, label: 'My Stats' },
-    { to: '/dashboard/performance', icon: Activity, label: 'Performance' },
-    { to: '/dashboard/profile', icon: User, label: 'Profile' },
+    { to: '/dashboard', icon: LayoutDashboard, label: t('sidebar.dashboard') },
+    { to: '/dashboard/queue', icon: FileCheck, label: t('sidebar.documentQueue') },
+    { to: '/dashboard/my-work', icon: FileText, label: t('sidebar.myProcessed') },
+    { to: '/dashboard/stats', icon: BarChart3, label: t('sidebar.myStats') },
+    { to: '/dashboard/performance', icon: Activity, label: t('sidebar.performance') },
+    { to: '/dashboard/profile', icon: User, label: t('sidebar.profile') },
   ];
 
   // Admin grouped navigation
   const adminGroups: NavGroup[] = [
     {
-      label: 'Documents',
+      label: t('navigation.documentsGroup'),
       icon: FolderOpen,
       badgeKey: 'documents',
       links: [
-        { to: '/dashboard/queue', icon: FileCheck, label: 'Queue', badgeKey: 'pendingDocuments' },
-        { to: '/dashboard/documents', icon: FileText, label: 'All Documents' },
-        { to: '/dashboard/magic-links', icon: Upload, label: 'Magic Links' },
-        { to: '/dashboard/bulk-upload', icon: FileStack, label: 'Bulk Upload' },
-        { to: '/dashboard/unmatched-reports', icon: FileQuestion, label: 'Unmatched Reports' },
-        { to: '/dashboard/needs-review', icon: AlertTriangle, label: 'Needs Review' },
+        { to: '/dashboard/queue', icon: FileCheck, label: t('sidebar.queue'), badgeKey: 'pendingDocuments' },
+        { to: '/dashboard/documents', icon: FileText, label: t('sidebar.allDocuments') },
+        { to: '/dashboard/magic-links', icon: Upload, label: t('sidebar.magicLinks') },
+        { to: '/dashboard/bulk-upload', icon: FileStack, label: t('sidebar.bulkUpload') },
+        { to: '/dashboard/unmatched-reports', icon: FileQuestion, label: t('sidebar.unmatchedReports') },
+        { to: '/dashboard/needs-review', icon: AlertTriangle, label: t('sidebar.needsReview') },
       ],
     },
     {
-      label: 'Users & Staff',
+      label: t('navigation.usersAndStaff'),
       icon: UserCog,
       links: [
-        { to: '/dashboard/users', icon: Users, label: 'Users' },
-        { to: '/dashboard/staff-work', icon: ClipboardList, label: 'Staff Work' },
-        { to: '/dashboard/staff-permissions', icon: Shield, label: 'Permissions' },
-        { to: '/dashboard/blocked-users', icon: ShieldBan, label: 'Blocked' },
+        { to: '/dashboard/users', icon: Users, label: t('sidebar.users') },
+        { to: '/dashboard/staff-work', icon: ClipboardList, label: t('sidebar.staffWork') },
+        { to: '/dashboard/staff-permissions', icon: Shield, label: t('sidebar.permissions') },
+        { to: '/dashboard/blocked-users', icon: ShieldBan, label: t('sidebar.blocked') },
       ],
     },
     {
-      label: 'Payments',
+      label: t('navigation.paymentsGroup'),
       icon: Wallet,
       badgeKey: 'payments',
       links: [
-        { to: '/dashboard/pricing', icon: CreditCard, label: 'Pricing' },
-        { to: '/dashboard/promo-codes', icon: Ticket, label: 'Promo Codes' },
-        { to: '/dashboard/revenue', icon: DollarSign, label: 'Revenue' },
-        { to: '/dashboard/viva-payments', icon: Globe, label: 'Viva.com' },
-        { to: '/dashboard/crypto-payments', icon: CreditCard, label: 'Crypto', badgeKey: 'pendingCrypto' },
-        { to: '/dashboard/manual-payments', icon: Wallet, label: 'Manual', badgeKey: 'pendingManualPayments' },
+        { to: '/dashboard/pricing', icon: CreditCard, label: t('sidebar.pricingPlans') },
+        { to: '/dashboard/promo-codes', icon: Ticket, label: t('sidebar.promoCodes') },
+        { to: '/dashboard/revenue', icon: DollarSign, label: t('sidebar.revenue') },
+        { to: '/dashboard/viva-payments', icon: Globe, label: t('sidebar.vivaPayments') },
+        { to: '/dashboard/crypto-payments', icon: CreditCard, label: t('sidebar.crypto'), badgeKey: 'pendingCrypto' },
+        { to: '/dashboard/manual-payments', icon: Wallet, label: t('sidebar.manual'), badgeKey: 'pendingManualPayments' },
       ],
     },
     {
-      label: 'Analytics',
+      label: t('navigation.analyticsGroup'),
       icon: PieChart,
       links: [
-        { to: '/dashboard/overview', icon: LayoutDashboard, label: 'Overview' },
-        { to: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
-        { to: '/dashboard/activity-logs', icon: Activity, label: 'Activity Logs' },
-        { to: '/dashboard/system-health', icon: Server, label: 'System Health' },
-        { to: '/dashboard/reports', icon: FileDown, label: 'Reports' },
-        { to: '/dashboard/performance', icon: Activity, label: 'Staff Performance' },
+        { to: '/dashboard/overview', icon: LayoutDashboard, label: t('sidebar.overview') },
+        { to: '/dashboard/analytics', icon: BarChart3, label: t('sidebar.analytics') },
+        { to: '/dashboard/activity-logs', icon: Activity, label: t('sidebar.activityLogs') },
+        { to: '/dashboard/system-health', icon: Server, label: t('sidebar.systemHealth') },
+        { to: '/dashboard/reports', icon: FileDown, label: t('sidebar.reports') },
+        { to: '/dashboard/performance', icon: Activity, label: t('sidebar.staffPerformance') },
       ],
     },
     {
-      label: 'Communication',
+      label: t('navigation.communication'),
       icon: Bell,
       badgeKey: 'communication',
       links: [
-        { to: '/dashboard/announcements', icon: Megaphone, label: 'Announcements' },
-        { to: '/dashboard/notifications', icon: Bell, label: 'Notifications' },
-        { to: '/dashboard/emails', icon: Mail, label: 'Email Center' },
-        { to: '/dashboard/support-tickets', icon: MessageSquare, label: 'Support', badgeKey: 'openTickets' },
+        { to: '/dashboard/announcements', icon: Megaphone, label: t('sidebar.announcements') },
+        { to: '/dashboard/notifications', icon: Bell, label: t('sidebar.notifications') },
+        { to: '/dashboard/emails', icon: Mail, label: t('sidebar.emailCenter') },
+        { to: '/dashboard/support-tickets', icon: MessageSquare, label: t('sidebar.support'), badgeKey: 'openTickets' },
       ],
     },
     {
-      label: 'Settings',
+      label: t('navigation.settingsGroup'),
       icon: Wrench,
       links: [
-        { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
-        { to: '/dashboard/ai-helper', icon: Bot, label: 'AI Helper' },
-        { to: '/dashboard/profile', icon: User, label: 'Profile' },
+        { to: '/dashboard/settings', icon: Settings, label: t('sidebar.settings') },
+        { to: '/dashboard/ai-helper', icon: Bot, label: t('sidebar.aiHelper') },
+        { to: '/dashboard/profile', icon: User, label: t('sidebar.profile') },
       ],
     },
   ];
@@ -531,7 +533,7 @@ export const DashboardSidebar: React.FC = () => {
           )}
         >
           <LayoutDashboard className="h-4 w-4" />
-          <span className="text-sm font-medium">Dashboard</span>
+          <span className="text-sm font-medium">{t('sidebar.dashboard')}</span>
         </Link>
       )}
 
@@ -633,7 +635,7 @@ export const DashboardSidebar: React.FC = () => {
         <div className="p-4 border-t border-border space-y-4">
           {role === 'customer' && profile && (
             <div className="px-4 py-3 bg-muted rounded-lg">
-              <p className="text-xs text-muted-foreground">Credit Balance</p>
+              <p className="text-xs text-muted-foreground">{t('dashboard.creditBalance')}</p>
               <p className="text-2xl font-bold text-primary">{profile.credit_balance}</p>
             </div>
           )}
@@ -649,7 +651,7 @@ export const DashboardSidebar: React.FC = () => {
             onClick={signOut}
           >
             <LogOut className="h-5 w-5" />
-            Sign Out
+            {t('sidebar.logout')}
           </Button>
         </div>
       </aside>
