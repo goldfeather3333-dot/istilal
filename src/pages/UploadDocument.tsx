@@ -82,12 +82,20 @@ export default function UploadDocument() {
     setUploading(true);
     setUploadProgress({ current: 0, total: selectedFiles.length });
 
+    // Pass exclusion options to the upload function
     const results = await uploadDocuments(
       selectedFiles,
       (current, total) => {
         setUploadProgress({ current, total });
       },
-      { uploadType: 'single' }
+      { 
+        uploadType: 'single',
+        exclusions: {
+          exclude_bibliographic: excludeBibliographic,
+          exclude_quoted: excludeQuoted,
+          exclude_small_sources: excludeSmallSources,
+        }
+      }
     );
 
     setUploading(false);

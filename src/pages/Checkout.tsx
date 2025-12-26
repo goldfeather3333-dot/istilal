@@ -18,6 +18,8 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useWhatsApp } from '@/hooks/useWhatsApp';
+import { PromoCodeInput } from '@/components/PromoCodeInput';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface PaymentDetails {
   paymentId: string;
@@ -27,11 +29,18 @@ interface PaymentDetails {
   status: string;
 }
 
+interface PromoDiscount {
+  percentage: number;
+  credits: number;
+  code: string;
+}
+
 export default function Checkout() {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
   const { openWhatsAppCustom } = useWhatsApp();
   const { cart, updateCartQuantity, removeFromCart, clearCart, getCartTotal, getCartCredits } = useCart();
+  const { formatPrice, symbol } = useCurrency();
   
   const [loading, setLoading] = useState(true);
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
@@ -39,6 +48,9 @@ export default function Checkout() {
   const [binanceEnabled, setBinanceEnabled] = useState(false);
   const [vivaEnabled, setVivaEnabled] = useState(false);
   const [binancePayId, setBinancePayId] = useState('');
+  
+  // Promo code state
+  const [appliedPromo, setAppliedPromo] = useState<PromoDiscount | null>(null);
   
   // Payment fees
   const [fees, setFees] = useState<{ whatsapp: number; usdt: number; binance: number; viva: number }>({
@@ -63,12 +75,30 @@ export default function Checkout() {
   // Viva payment state
   const [creatingVivaPayment, setCreatingVivaPayment] = useState(false);
 
+  // Calculate base total with promo discount
+  const getDiscountedTotal = () => {
+    const baseTotal = getCartTotal();
+    if (!appliedPromo || !appliedPromo.percentage) return baseTotal;
+    const discount = baseTotal * (appliedPromo.percentage / 100);
+    return Math.max(0, baseTotal - discount);
+  };
+
   // Calculate total with fee
   const calculateTotalWithFee = (method: 'whatsapp' | 'usdt' | 'binance' | 'viva') => {
-    const baseTotal = getCartTotal();
+    const baseTotal = getDiscountedTotal();
     const feePercent = fees[method] || 0;
     const feeAmount = baseTotal * (feePercent / 100);
     return Math.round((baseTotal + feeAmount) * 100) / 100;
+  };
+  
+  // Get bonus credits from promo
+  const getBonusCredits = () => {
+    return appliedPromo?.credits || 0;
+  };
+
+  // Get total credits including bonus
+  const getTotalCredits = () => {
+    return getCartCredits() + getBonusCredits();
   };
 
   useEffect(() => {
@@ -404,14 +434,46 @@ export default function Checkout() {
 
                 <Separator />
 
+                {/* Promo Code Input */}
+                <PromoCodeInput
+                  onApply={(discount) => setAppliedPromo(discount)}
+                  onRemove={() => setAppliedPromo(null)}
+                  appliedCode={appliedPromo?.code || null}
+                  baseTotal={getCartTotal()}
+                />
+
+                <Separator />
+
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Credits</span>
+                    <span className="text-muted-foreground">Credits</span>
                     <span className="font-medium">{getCartCredits()}</span>
                   </div>
+                  {getBonusCredits() > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Bonus Credits</span>
+                      <span className="font-medium">+{getBonusCredits()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total Credits</span>
+                    <span className="font-medium">{getTotalCredits()}</span>
+                  </div>
+                  {appliedPromo?.percentage && appliedPromo.percentage > 0 && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className="line-through text-muted-foreground">{formatPrice(getCartTotal())}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Discount ({appliedPromo.percentage}%)</span>
+                        <span>-{formatPrice(getCartTotal() * (appliedPromo.percentage / 100))}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span className="text-primary">${getCartTotal()}</span>
+                    <span className="text-primary">{formatPrice(getDiscountedTotal())}</span>
                   </div>
                 </div>
 

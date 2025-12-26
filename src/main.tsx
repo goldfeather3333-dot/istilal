@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "./i18n";
 
 /**
  * HARD RESET: Unregister ALL service workers and re-register fresh.

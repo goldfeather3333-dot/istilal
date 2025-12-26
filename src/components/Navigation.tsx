@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Menu, X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -38,6 +39,7 @@ const Navigation = () => {
                 {link.label}
               </a>
             ))}
+            <LanguageSwitcher />
             <Link to="/install">
               <Button variant="outline" size="sm" className="gap-2">
                 <Download className="h-4 w-4" />

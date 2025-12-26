@@ -16,8 +16,9 @@ interface PhoneInputProps {
 
 export const PhoneInput: React.FC<PhoneInputProps> = ({ value, onChange, disabled, error }) => {
   const [open, setOpen] = useState(false);
+  // Default to Iraq (+964) as per requirement
   const [selectedCountry, setSelectedCountry] = useState<Country>(
-    countries.find(c => c.code === 'PK') || countries[0]
+    countries.find(c => c.code === 'IQ') || countries[0]
   );
   const [phoneNumber, setPhoneNumber] = useState('');
   const [validationError, setValidationError] = useState('');

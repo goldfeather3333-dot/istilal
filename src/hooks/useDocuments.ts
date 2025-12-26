@@ -266,11 +266,19 @@ export const useDocuments = () => {
   const uploadDocuments = async (
     files: File[],
     onProgress?: (current: number, total: number) => void,
-    options?: { uploadType?: 'single' | 'bulk' }
+    options?: { 
+      uploadType?: 'single' | 'bulk';
+      exclusions?: {
+        exclude_bibliographic?: boolean;
+        exclude_quoted?: boolean;
+        exclude_small_sources?: boolean;
+      };
+    }
   ): Promise<{ success: number; failed: number }> => {
     if (!user) return { success: 0, failed: files.length };
 
     const uploadType = options?.uploadType ?? 'single';
+    const exclusions = options?.exclusions;
 
     const failToast = (title: string, description: string, error?: unknown) => {
       if (error) console.error(`Upload (${uploadType}) failed:`, { title, description, error });
@@ -343,7 +351,7 @@ export const useDocuments = () => {
         // Keep the format as "fileA (X)" - base name with bracket number
         const originalFileName = fileNameWithoutExt.trim();
 
-        // 2) Create document record with original_file_name and is_pdf_original
+        // 2) Create document record with original_file_name, is_pdf_original, and exclusion options
         const { data: docData, error: insertError } = await supabase
           .from('documents')
           .insert({
@@ -353,6 +361,9 @@ export const useDocuments = () => {
             status: 'pending',
             original_file_name: originalFileName,
             is_pdf_original: isPdfOriginal,
+            exclude_bibliographic: exclusions?.exclude_bibliographic ?? true,
+            exclude_quoted: exclusions?.exclude_quoted ?? false,
+            exclude_small_sources: exclusions?.exclude_small_sources ?? false,
           })
           .select()
           .single();
