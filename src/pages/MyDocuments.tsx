@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import JSZip from 'jszip';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,6 +11,10 @@ import { DocumentTagManager } from '@/components/DocumentTagManager';
 import { FileText, Download, Loader2, Star, StarOff, DownloadCloud, Package, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Table,
   TableBody,
@@ -32,9 +36,10 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function MyDocuments() {
-  const { documents, loading, downloadFile, deleteDocument } = useDocuments();
+  const { documents, loading, downloadFile, deleteDocument, fetchDocuments } = useDocuments();
   const { role } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const isStaffOrAdmin = role === 'staff' || role === 'admin';
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDownloading, setBulkDownloading] = useState(false);
@@ -46,6 +51,22 @@ export default function MyDocuments() {
     status: 'all',
     dateFrom: undefined,
     dateTo: undefined
+  });
+
+  // Pull-to-refresh handler
+  const handleRefresh = useCallback(async () => {
+    try {
+      await fetchDocuments();
+      toast({ title: 'Documents refreshed' });
+    } catch (error) {
+      console.error('Refresh failed:', error);
+      toast({ title: 'Failed to refresh', variant: 'destructive' });
+    }
+  }, [fetchDocuments, toast]);
+
+  const { containerRef, pullDistance, progress, isRefreshing } = usePullToRefresh({
+    onRefresh: handleRefresh,
+    threshold: 80,
   });
 
   const filteredDocuments = useMemo(() => {
@@ -188,7 +209,24 @@ export default function MyDocuments() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div 
+        ref={isMobile ? containerRef : undefined}
+        className="relative"
+        style={{
+          transform: isMobile && pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
+          transition: !isRefreshing && pullDistance === 0 ? 'transform 0.2s ease-out' : undefined,
+        }}
+      >
+        {/* Pull to Refresh Indicator - Mobile Only */}
+        {isMobile && (
+          <PullToRefreshIndicator
+            pullDistance={pullDistance}
+            progress={progress}
+            isRefreshing={isRefreshing}
+          />
+        )}
+        
+        <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-display font-bold">My Documents</h1>
@@ -421,43 +459,44 @@ export default function MyDocuments() {
             </CardContent>
           </Card>
         )}
-      </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Document</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to permanently delete this file?
-              <br /><br />
-              <strong>"{documentToDelete?.file_name}"</strong>
-              <br /><br />
-              This action cannot be undone. The original document and all associated reports will be permanently removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Permanently
-                </>
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Document</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to permanently delete this file?
+                <br /><br />
+                <strong>"{documentToDelete?.file_name}"</strong>
+                <br /><br />
+                This action cannot be undone. The original document and all associated reports will be permanently removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Permanently
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        </div>
+      </div>
     </DashboardLayout>
   );
 }

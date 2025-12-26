@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 import { useDocuments, Document } from '@/hooks/useDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -47,9 +51,10 @@ interface BatchReportData {
 }
 
 export default function DocumentQueue() {
-  const { documents, loading, downloadFile, uploadReport, updateDocumentStatus, releaseDocument } = useDocuments();
+  const { documents, loading, downloadFile, uploadReport, updateDocumentStatus, releaseDocument, fetchDocuments } = useDocuments();
   const { user, role } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -74,6 +79,22 @@ export default function DocumentQueue() {
     status: 'all',
     dateFrom: undefined,
     dateTo: undefined
+  });
+
+  // Pull-to-refresh handler
+  const handleRefresh = useCallback(async () => {
+    try {
+      await fetchDocuments();
+      toast({ title: 'Queue refreshed' });
+    } catch (error) {
+      console.error('Refresh failed:', error);
+      toast({ title: 'Failed to refresh', variant: 'destructive' });
+    }
+  }, [fetchDocuments, toast]);
+
+  const { containerRef, pullDistance, progress, isRefreshing } = usePullToRefresh({
+    onRefresh: handleRefresh,
+    threshold: 80,
   });
 
   // Fetch settings
@@ -472,7 +493,24 @@ export default function DocumentQueue() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div 
+        ref={isMobile ? containerRef : undefined}
+        className="relative"
+        style={{
+          transform: isMobile && pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
+          transition: !isRefreshing && pullDistance === 0 ? 'transform 0.2s ease-out' : undefined,
+        }}
+      >
+        {/* Pull to Refresh Indicator - Mobile Only */}
+        {isMobile && (
+          <PullToRefreshIndicator
+            pullDistance={pullDistance}
+            progress={progress}
+            isRefreshing={isRefreshing}
+          />
+        )}
+        
+        <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-display font-bold">Document Queue</h1>
@@ -891,6 +929,7 @@ export default function DocumentQueue() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </div>
       </div>
     </DashboardLayout>
   );

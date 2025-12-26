@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,9 +6,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { FileCheck, TrendingUp, Calendar, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 
 export default function StaffStats() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [totalProcessed, setTotalProcessed] = useState(0);
   const [todayCount, setTodayCount] = useState(0);
@@ -16,11 +21,7 @@ export default function StaffStats() {
   const [dailyStats, setDailyStats] = useState<{ date: string; count: number }[]>([]);
   const [weeklyStats, setWeeklyStats] = useState<{ week: string; count: number }[]>([]);
 
-  useEffect(() => {
-    if (user) fetchStats();
-  }, [user]);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
@@ -72,7 +73,28 @@ export default function StaffStats() {
     setWeeklyStats(last4Weeks);
 
     setLoading(false);
-  };
+  }, [user]);
+
+  // Pull-to-refresh handler
+  const handleRefresh = useCallback(async () => {
+    try {
+      await fetchStats();
+      toast.success('Stats refreshed');
+    } catch (error) {
+      console.error('Refresh failed:', error);
+      toast.error('Failed to refresh');
+    }
+  }, [fetchStats]);
+
+  const { containerRef, pullDistance, progress, isRefreshing } = usePullToRefresh({
+    onRefresh: handleRefresh,
+    threshold: 80,
+  });
+
+  useEffect(() => {
+    if (user) fetchStats();
+  }, [user, fetchStats]);
+
 
   if (loading) {
     return (
@@ -86,7 +108,24 @@ export default function StaffStats() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div 
+        ref={isMobile ? containerRef : undefined}
+        className="relative"
+        style={{
+          transform: isMobile && pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
+          transition: !isRefreshing && pullDistance === 0 ? 'transform 0.2s ease-out' : undefined,
+        }}
+      >
+        {/* Pull to Refresh Indicator - Mobile Only */}
+        {isMobile && (
+          <PullToRefreshIndicator
+            pullDistance={pullDistance}
+            progress={progress}
+            isRefreshing={isRefreshing}
+          />
+        )}
+        
+        <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-display font-bold">My Stats</h1>
           <p className="text-muted-foreground mt-1">Your processing performance</p>
@@ -170,6 +209,7 @@ export default function StaffStats() {
             </Tabs>
           </CardContent>
         </Card>
+        </div>
       </div>
     </DashboardLayout>
   );
