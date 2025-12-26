@@ -64,6 +64,8 @@ export default function DocumentQueue() {
   const [dialogMode] = useState<'report'>('report');
   const [similarityFile, setSimilarityFile] = useState<File | null>(null);
   const [aiFile, setAiFile] = useState<File | null>(null);
+  const [similarityPercentage, setSimilarityPercentage] = useState<string>('');
+  const [aiPercentage, setAiPercentage] = useState<string>('');
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [globalTimeout, setGlobalTimeout] = useState(30);
@@ -436,19 +438,23 @@ export default function DocumentQueue() {
     setSelectedDoc(null);
     setSimilarityFile(null);
     setAiFile(null);
+    setSimilarityPercentage('');
+    setAiPercentage('');
     setRemarks('');
   };
 
   const handleSubmitReport = async () => {
     if (!selectedDoc) return;
     setSubmitting(true);
+    const simPercent = similarityPercentage.trim() !== '' ? parseFloat(similarityPercentage) : 0;
+    const aiPercent = aiPercentage.trim() !== '' ? parseFloat(aiPercentage) : 0;
     await uploadReport(
       selectedDoc.id,
       selectedDoc,
       similarityFile,
       aiFile,
-      0,
-      0,
+      isNaN(simPercent) ? 0 : simPercent,
+      isNaN(aiPercent) ? 0 : aiPercent,
       remarks.trim() || null
     );
     setSubmitting(false);
@@ -825,6 +831,35 @@ export default function DocumentQueue() {
                   <p className="text-sm text-muted-foreground mt-1">Selected: {aiFile.name}</p>
                 )}
               </div>
+              
+              {/* Percentage Inputs */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Similarity Percentage (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="e.g., 25.5"
+                    value={similarityPercentage}
+                    onChange={(e) => setSimilarityPercentage(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>AI Percentage (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="e.g., 10.2"
+                    value={aiPercentage}
+                    onChange={(e) => setAiPercentage(e.target.value)}
+                  />
+                </div>
+              </div>
+              
               <div>
                 <Label>Remarks (Optional)</Label>
                 <Textarea 
