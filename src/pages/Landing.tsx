@@ -401,7 +401,7 @@ const Landing = () => {
               </p>
               <Link to="/auth">
                 <Button size="lg" className="bg-white text-emerald-600 hover:bg-white/90 rounded-xl px-10 h-14 text-lg font-semibold shadow-xl group">
-                  Start Your Free Trial
+                  Get Started
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
