@@ -11,10 +11,10 @@ const Footer = () => {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="text-2xl font-display font-bold text-primary inline-block mb-4">
-              Plagaiscans
+              Istilal
             </Link>
             <p className="text-muted-foreground text-sm mb-4">
-              AI-assisted similarity analysis and plagiarism detection for educational purposes.
+              Academic integrity platform for plagiarism and similarity checking with clear, easy-to-read reports.
             </p>
           </div>
 
@@ -67,11 +67,11 @@ const Footer = () => {
             <h4 className="font-semibold mb-4">Contact Us</h4>
             <div className="space-y-2 text-sm">
               <a 
-                href="mailto:support@plagaiscans.com" 
+                href="mailto:support@istilal.com" 
                 className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
               >
                 <Mail className="h-4 w-4" />
-                support@plagaiscans.com
+                support@istilal.com
               </a>
             </div>
           </div>
@@ -80,8 +80,8 @@ const Footer = () => {
         {/* Bottom */}
         <div className="pt-6 border-t border-border">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>© {currentYear} Plagaiscans. All rights reserved.</p>
-            <p>Plagaiscans is operated by Goldfeather Prem Ltd (United Kingdom)</p>
+            <p>© {currentYear} Istilal. All rights reserved.</p>
+            <p>Check originality. Protect academic integrity.</p>
           </div>
         </div>
       </div>

@@ -11,22 +11,22 @@ const Landing = () => {
     {
       icon: FileText,
       title: "Similarity Detection",
-      description: "Documents checked against billions of academic papers, websites, and publications from multiple sources",
+      description: "Detailed similarity reports with source insights. Identify overlapping text and improve originality.",
     },
     {
       icon: Bot,
-      title: "AI Content Detection",
-      description: "Identify AI-generated text from ChatGPT, Claude, and other AI tools",
+      title: "AI Content Indicators",
+      description: "Optional AI-content detection to evaluate whether text may include AI-generated writing.",
     },
     {
       icon: Clock,
       title: "Fast Processing",
-      description: "Get your detailed reports back within minutes, not hours",
+      description: "Get your detailed reports back within minutes, not hours.",
     },
     {
       icon: Shield,
-      title: "Secure & Private",
-      description: "Your documents are encrypted and never shared with third parties",
+      title: "Privacy-First",
+      description: "Your documents are encrypted and never shared with third parties.",
     },
   ];
 
@@ -63,7 +63,7 @@ const Landing = () => {
               <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-semibold text-gray-900">PlagaiScans</span>
+              <span className="text-xl font-semibold text-gray-900">Istilal</span>
             </div>
             <div className="flex items-center gap-4">
               {user ? (
@@ -97,28 +97,28 @@ const Landing = () => {
           {/* Trust Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full border border-gray-200 mb-8">
             <Sparkles className="w-4 h-4 text-blue-700" />
-            <span className="text-sm text-gray-600">Trusted by 10,000+ academics & researchers</span>
+            <span className="text-sm text-gray-600">Trusted by academics & researchers worldwide</span>
           </div>
 
           {/* Main Heading */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
-            Detect Plagiarism & AI Content
+            Plagiarism & Similarity Check
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-              With Confidence
+              For Academic Integrity
             </span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-lg text-gray-500 mb-8 max-w-2xl mx-auto">
-            Professional document checking service for students, educators, and businesses. 
-            Get detailed similarity and AI detection reports in minutes.
+            Clear similarity reports you can trust. Verify text originality, identify overlapping 
+            sections, and understand similarity sources through easy-to-read reports.
           </p>
 
           {/* Trust Badge - Updated */}
           <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-lg border border-gray-200 shadow-sm mb-8">
             <Shield className="w-5 h-5 text-blue-700" />
-            <span className="text-gray-700 font-medium">Advanced Plagiarism Detection</span>
+            <span className="text-gray-700 font-medium">Privacy-First Plagiarism Scanning</span>
           </div>
 
           {/* CTA Button */}
@@ -141,7 +141,7 @@ const Landing = () => {
               Comprehensive Document Analysis
             </h2>
             <p className="text-gray-500 text-lg">
-              Our platform provides thorough checking to ensure document authenticity
+              Detailed similarity reports with source insights for academic compliance
             </p>
           </div>
 
@@ -203,7 +203,7 @@ const Landing = () => {
             Ready to Check Your Documents?
           </h2>
           <p className="text-gray-500 text-lg mb-8">
-            Join thousands of users who trust PlagaiScans for accurate plagiarism and AI detection.
+            Join thousands of students, researchers, and universities who trust Istilal for accurate plagiarism and similarity checking.
           </p>
           <Link to="/auth">
             <Button className="bg-blue-700 hover:bg-blue-800 text-white rounded-full px-8 py-6 text-lg font-medium">
@@ -225,11 +225,11 @@ const Landing = () => {
                 <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
                   <FileText className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-semibold text-gray-900">PlagaiScans</span>
+                <span className="text-xl font-semibold text-gray-900">Istilal</span>
               </div>
               <p className="text-gray-500 text-sm max-w-sm">
-                Professional AI-assisted similarity detection and plagiarism analysis for 
-                students, educators, and businesses worldwide.
+                Academic integrity platform for plagiarism and similarity checking. 
+                Clear reports you can trust for students, researchers, and universities.
               </p>
             </div>
             
@@ -256,13 +256,13 @@ const Landing = () => {
           {/* Bottom */}
           <div className="pt-8 border-t border-gray-100 text-center space-y-2">
             <p className="text-gray-600 text-sm">
-              © {new Date().getFullYear()} Plagaiscans. All rights reserved.
+              © {new Date().getFullYear()} Istilal. All rights reserved.
             </p>
             <p className="text-gray-500 text-xs">
-              Plagaiscans is operated by Goldfeather Prem Ltd (United Kingdom)
+              Check originality. Protect academic integrity.
             </p>
             <p className="text-gray-500 text-xs">
-              Contact: <a href="mailto:support@plagaiscans.com" className="text-blue-700 hover:underline">support@plagaiscans.com</a>
+              Contact: <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">support@istilal.com</a>
             </p>
           </div>
         </div>
