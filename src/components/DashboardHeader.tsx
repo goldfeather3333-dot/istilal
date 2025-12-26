@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Moon, Sun, Coins, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from './NotificationBell';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
@@ -86,6 +87,9 @@ export const DashboardHeader: React.FC = () => {
               )}
             </Button>
           )}
+
+          {/* Language Switcher */}
+          <LanguageSwitcher />
 
           {/* Theme Toggle */}
           <Button

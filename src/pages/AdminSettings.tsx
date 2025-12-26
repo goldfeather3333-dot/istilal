@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MessageCircle, Save, Loader2, Clock, CreditCard, Bitcoin, Wallet, Globe, Percent, AlertTriangle, Bell, Send, Wrench } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AdminCurrencySettings } from '@/components/AdminCurrencySettings';
 
 export default function AdminSettings() {
   const { toast } = useToast();
@@ -697,6 +698,9 @@ export default function AdminSettings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Currency Settings */}
+        <AdminCurrencySettings />
       </div>
     </DashboardLayout>
   );
