@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrency } from '@/hooks/useCurrency';
 
 export const useWhatsApp = () => {
   const { user, profile } = useAuth();
+  const { currency, symbol, formatPrice } = useCurrency();
   const [whatsappNumber, setWhatsappNumber] = useState<string>('+9647819476757');
 
   useEffect(() => {
@@ -27,9 +29,10 @@ export const useWhatsApp = () => {
     return () => clearTimeout(timeoutId);
   }, []);
 
-  const openWhatsApp = (credits?: number) => {
+  const openWhatsApp = (credits?: number, priceUSD?: number) => {
+    const formattedPrice = priceUSD ? formatPrice(priceUSD) : '___';
     const message = encodeURIComponent(
-      `Hello, I want to buy credits.\nUser ID: ${user?.id || 'Not logged in'}\nEmail: ${profile?.email || 'Not logged in'}\nRequested Credits: ${credits || '___'}`
+      `Hello, I want to buy credits.\nUser ID: ${user?.id || 'Not logged in'}\nEmail: ${profile?.email || 'Not logged in'}\nRequested Credits: ${credits || '___'}\nAmount: ${formattedPrice} ${currency}`
     );
     
     openWhatsAppWithMessage(message);

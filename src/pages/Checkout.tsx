@@ -353,7 +353,8 @@ export default function Checkout() {
 
   const handleWhatsAppPayment = () => {
     const totalWithFee = calculateTotalWithFee('whatsapp');
-    const message = `Hi, I want to buy ${getCartCredits()} credits for $${totalWithFee}. Please help me with the payment.`;
+    const formattedAmount = formatPrice(totalWithFee);
+    const message = `Hi, I want to buy ${getCartCredits()} credits for ${formattedAmount}. Please help me with the payment.`;
     openWhatsAppCustom(message);
   };
 
