@@ -25,7 +25,7 @@ const Install = () => {
             </div>
             <CardTitle className="text-2xl">App Installed!</CardTitle>
             <CardDescription>
-              PlagaiScans is installed on your device. You can access it from your home screen.
+              Istilal is installed on your device. You can access it from your home screen.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -45,7 +45,7 @@ const Install = () => {
           <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
             <Smartphone className="w-8 h-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Install PlagaiScans</CardTitle>
+          <CardTitle className="text-2xl">Install Istilal</CardTitle>
           <CardDescription>
             Install our app for quick access and a better experience
           </CardDescription>
