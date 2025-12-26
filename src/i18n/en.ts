@@ -319,6 +319,7 @@ export const en = {
     aiHelper: 'AI Helper',
     searchPlaceholder: 'Search menu... (⌘K)',
     logout: 'Logout',
+    tagline: 'Document Similarity Detection',
   },
   profile: {
     title: 'Profile',

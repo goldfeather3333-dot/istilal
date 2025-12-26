@@ -319,6 +319,7 @@ export const ar = {
     aiHelper: 'مساعد AI',
     searchPlaceholder: 'البحث في القائمة... (⌘K)',
     logout: 'تسجيل الخروج',
+    tagline: 'كشف تشابه المستندات',
   },
   profile: {
     title: 'الملف الشخصي',

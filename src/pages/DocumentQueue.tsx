@@ -50,6 +50,8 @@ interface BatchReportData {
   fileName: string;
   similarityFile: File | null;
   aiFile: File | null;
+  similarityPercentage: string;
+  aiPercentage: string;
   remarks: string;
 }
 
@@ -315,6 +317,8 @@ export default function DocumentQueue() {
       fileName: doc.file_name,
       similarityFile: null,
       aiFile: null,
+      similarityPercentage: '',
+      aiPercentage: '',
       remarks: '',
     })));
     setBatchDialogOpen(true);
@@ -348,13 +352,15 @@ export default function DocumentQueue() {
       for (const data of batchReportData) {
         const doc = documents.find(d => d.id === data.docId);
         if (doc) {
+          const simPercent = data.similarityPercentage.trim() !== '' ? parseFloat(data.similarityPercentage) : 0;
+          const aiPercent = data.aiPercentage.trim() !== '' ? parseFloat(data.aiPercentage) : 0;
           await uploadReport(
             data.docId,
             doc,
             data.similarityFile,
             data.aiFile,
-            0,
-            0,
+            isNaN(simPercent) ? 0 : simPercent,
+            isNaN(aiPercent) ? 0 : aiPercent,
             data.remarks.trim() || null
           );
         }
@@ -928,6 +934,34 @@ export default function DocumentQueue() {
                       {data.aiFile && (
                         <p className="text-xs text-muted-foreground mt-1 truncate">{data.aiFile.name}</p>
                       )}
+                    </div>
+                  </div>
+                  
+                  {/* Percentage Inputs */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Similarity Percentage (%)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="e.g., 25.5"
+                        value={data.similarityPercentage}
+                        onChange={(e) => updateBatchData(index, 'similarityPercentage', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">AI Percentage (%)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="e.g., 10.2"
+                        value={data.aiPercentage}
+                        onChange={(e) => updateBatchData(index, 'aiPercentage', e.target.value)}
+                      />
                     </div>
                   </div>
                   
