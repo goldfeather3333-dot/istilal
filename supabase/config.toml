@@ -5,3 +5,24 @@ verify_jwt = false
 
 [functions.send-push-notification]
 verify_jwt = false
+
+[functions.send-completion-email]
+verify_jwt = false
+
+[functions.send-welcome-email]
+verify_jwt = false
+
+[functions.send-password-reset]
+verify_jwt = false
+
+[functions.send-payment-verified-email]
+verify_jwt = false
+
+[functions.notify-document-upload]
+verify_jwt = false
+
+[functions.send-customer-notification]
+verify_jwt = false
+
+[functions.admin-send-email]
+verify_jwt = false
