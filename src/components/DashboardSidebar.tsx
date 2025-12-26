@@ -506,7 +506,7 @@ export const DashboardSidebar: React.FC = () => {
         <Input
           ref={searchInputRef}
           type="text"
-          placeholder="Search... (⌘K)"
+          placeholder={t('sidebar.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9 pr-8 h-9 text-sm bg-muted/50"
@@ -620,7 +620,7 @@ export const DashboardSidebar: React.FC = () => {
             <span className="font-display font-bold text-lg bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Istilal</span>
           </Link>
           <div className="flex items-center gap-1.5 mt-2 ml-10">
-            <span className="text-xs text-muted-foreground">Document Similarity Detection</span>
+            <span className="text-xs text-muted-foreground">{t('sidebar.tagline')}</span>
           </div>
         </div>
 
