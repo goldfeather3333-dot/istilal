@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, forwardRef } from 'react';
 import { X, Download, Share, Plus, MoreVertical, Chrome, Globe, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
@@ -33,7 +33,7 @@ const detectBrowser = (): BrowserInfo => {
   };
 };
 
-export const SmartInstallPopup = () => {
+export const SmartInstallPopup = forwardRef<HTMLDivElement>((_, ref) => {
   const { isInstallable, isInstalled, promptInstall, isIOS, isAndroid } = usePWAInstall();
   const [showPopup, setShowPopup] = useState(false);
   const [browser, setBrowser] = useState<BrowserInfo | null>(null);
@@ -86,7 +86,7 @@ export const SmartInstallPopup = () => {
       return (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Install Plagaiscans for faster access and offline support.
+            Install Istilal for faster access and offline support.
           </p>
           <Button onClick={handleInstall} className="w-full gap-2">
             <Download className="w-4 h-4" />
@@ -100,7 +100,7 @@ export const SmartInstallPopup = () => {
       return (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground mb-3">
-            For the best experience on iOS, add Plagaiscans to your Home Screen:
+            For the best experience on iOS, add Istilal to your Home Screen:
           </p>
           <ol className="text-sm space-y-2 text-muted-foreground">
             <li className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export const SmartInstallPopup = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+    <div ref={ref} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="relative w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-5 animate-in zoom-in-95 duration-300">
         <button
           onClick={handleDismiss}
@@ -243,7 +243,7 @@ export const SmartInstallPopup = () => {
             {getBrowserIcon()}
           </div>
           <div>
-            <h2 className="font-semibold text-foreground text-lg">Install Plagaiscans</h2>
+            <h2 className="font-semibold text-foreground text-lg">Install Istilal</h2>
             <p className="text-xs text-muted-foreground">
               {browser.name} {isAndroid ? 'on Android' : isIOS ? 'on iOS' : 'Desktop'}
             </p>
@@ -263,4 +263,6 @@ export const SmartInstallPopup = () => {
       </div>
     </div>
   );
-};
+});
+
+SmartInstallPopup.displayName = 'SmartInstallPopup';

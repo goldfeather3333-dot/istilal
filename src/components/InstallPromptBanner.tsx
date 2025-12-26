@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { X, Download, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useNavigate } from 'react-router-dom';
 
-export const InstallPromptBanner = () => {
+export const InstallPromptBanner = forwardRef<HTMLDivElement>((_, ref) => {
   const { isInstallable, isInstalled, promptInstall, isIOS, isAndroid } = usePWAInstall();
   const [isDismissed, setIsDismissed] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
@@ -56,7 +56,7 @@ export const InstallPromptBanner = () => {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-in slide-in-from-bottom duration-500">
+    <div ref={ref} className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-in slide-in-from-bottom duration-500">
       <div className="max-w-lg mx-auto bg-card border border-border rounded-2xl shadow-2xl p-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -99,4 +99,6 @@ export const InstallPromptBanner = () => {
       </div>
     </div>
   );
-};
+});
+
+InstallPromptBanner.displayName = 'InstallPromptBanner';
