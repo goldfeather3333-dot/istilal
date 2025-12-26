@@ -5,16 +5,16 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const RefundPolicy = () => {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b border-gray-100 bg-white">
+      <nav className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-semibold text-gray-900">Istilal</span>
+              <span className="text-xl font-display font-bold text-foreground">Istilal</span>
             </Link>
             <Link to="/">
               <Button variant="ghost" className="gap-2">
@@ -27,18 +27,18 @@ const RefundPolicy = () => {
       </nav>
 
       <main className="max-w-4xl mx-auto px-4 py-16">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Refund & Cancellation Policy</h1>
-        <p className="text-gray-500 mb-8">Last updated: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        <h1 className="text-4xl font-display font-bold text-foreground mb-4">Refund & Cancellation Policy</h1>
+        <p className="text-muted-foreground mb-8">Last updated: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
 
         {/* Quick Summary Cards */}
         <div className="grid md:grid-cols-2 gap-4 mb-12">
-          <Card className="border-green-200 bg-green-50">
+          <Card className="border-primary/30 bg-primary/5">
             <CardContent className="p-6">
               <div className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+                <CheckCircle className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
                 <div>
-                  <h3 className="font-semibold text-green-900 mb-2">Eligible for Refund</h3>
-                  <ul className="text-green-800 text-sm space-y-1">
+                  <h3 className="font-display font-semibold text-foreground mb-2">Eligible for Refund</h3>
+                  <ul className="text-muted-foreground text-sm space-y-1">
                     <li>• Duplicate charges</li>
                     <li>• Technical failures preventing service</li>
                     <li>• Unused credits (certain conditions apply)</li>
@@ -48,13 +48,13 @@ const RefundPolicy = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-destructive/30 bg-destructive/5">
             <CardContent className="p-6">
               <div className="flex items-start gap-3">
-                <XCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+                <XCircle className="w-6 h-6 text-destructive flex-shrink-0 mt-1" />
                 <div>
-                  <h3 className="font-semibold text-red-900 mb-2">Not Eligible for Refund</h3>
-                  <ul className="text-red-800 text-sm space-y-1">
+                  <h3 className="font-display font-semibold text-foreground mb-2">Not Eligible for Refund</h3>
+                  <ul className="text-muted-foreground text-sm space-y-1">
                     <li>• Credits already used for analysis</li>
                     <li>• Dissatisfaction with analysis results</li>
                     <li>• Reports already delivered</li>
@@ -67,16 +67,16 @@ const RefundPolicy = () => {
 
         <div className="prose prose-gray max-w-none space-y-8">
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Digital Credits Policy</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-2xl font-display font-semibold text-foreground mb-4">1. Digital Credits Policy</h2>
+            <p className="text-muted-foreground leading-relaxed">
               Istilal operates on a credit-based system for document analysis services. Please 
               understand the following regarding credits and refunds:
             </p>
             
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
+            <div className="bg-secondary/10 border border-secondary/30 rounded-lg p-4 mt-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-1" />
-                <p className="text-amber-800 text-sm">
+                <AlertCircle className="w-5 h-5 text-secondary flex-shrink-0 mt-1" />
+                <p className="text-foreground text-sm">
                   <strong>Important:</strong> Digital credits that have been used for document analysis 
                   are non-refundable. Once a document has been submitted and processed, the credit is 
                   considered fully consumed.
@@ -86,66 +86,66 @@ const RefundPolicy = () => {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. When Refunds Are Available</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-2xl font-display font-semibold text-foreground mb-4">2. When Refunds Are Available</h2>
+            <p className="text-muted-foreground leading-relaxed">
               We offer refunds in the following circumstances:
             </p>
-            <ul className="list-disc pl-6 text-gray-600 space-y-3 mt-4">
+            <ul className="list-disc pl-6 text-muted-foreground space-y-3 mt-4">
               <li>
-                <strong>Duplicate Charges:</strong> If you were charged multiple times for the same 
+                <strong className="text-foreground">Duplicate Charges:</strong> If you were charged multiple times for the same 
                 purchase due to a technical error, we will refund the duplicate amount.
               </li>
               <li>
-                <strong>Technical Failures:</strong> If a technical issue on our end prevents you from 
+                <strong className="text-foreground">Technical Failures:</strong> If a technical issue on our end prevents you from 
                 receiving your analysis report after using credits, we will refund the credits or 
                 provide replacement credits.
               </li>
               <li>
-                <strong>Unused Credits:</strong> Refunds for unused credits may be considered on a 
+                <strong className="text-foreground">Unused Credits:</strong> Refunds for unused credits may be considered on a 
                 case-by-case basis within 14 days of purchase. Processing fees may apply.
               </li>
               <li>
-                <strong>Service Unavailability:</strong> If our service is unavailable for an extended 
+                <strong className="text-foreground">Service Unavailability:</strong> If our service is unavailable for an extended 
                 period affecting your ability to use purchased credits.
               </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">3. When Refunds Are NOT Available</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-2xl font-display font-semibold text-foreground mb-4">3. When Refunds Are NOT Available</h2>
+            <p className="text-muted-foreground leading-relaxed">
               Refunds will not be provided in the following situations:
             </p>
-            <ul className="list-disc pl-6 text-gray-600 space-y-3 mt-4">
+            <ul className="list-disc pl-6 text-muted-foreground space-y-3 mt-4">
               <li>
-                <strong>Used Credits:</strong> Credits that have been used to analyze documents, 
+                <strong className="text-foreground">Used Credits:</strong> Credits that have been used to analyze documents, 
                 regardless of the analysis results.
               </li>
               <li>
-                <strong>Reports Delivered:</strong> Once similarity or AI detection reports have been 
+                <strong className="text-foreground">Reports Delivered:</strong> Once similarity or AI detection reports have been 
                 generated and made available for download.
               </li>
               <li>
-                <strong>Result Dissatisfaction:</strong> Disagreement with analysis results does not 
+                <strong className="text-foreground">Result Dissatisfaction:</strong> Disagreement with analysis results does not 
                 qualify for a refund, as results reflect our analysis methodology.
               </li>
               <li>
-                <strong>User Error:</strong> Uploading incorrect files, duplicate submissions, or 
+                <strong className="text-foreground">User Error:</strong> Uploading incorrect files, duplicate submissions, or 
                 other user-initiated errors.
               </li>
               <li>
-                <strong>Account Termination:</strong> Credits remaining in accounts terminated due to 
+                <strong className="text-foreground">Account Termination:</strong> Credits remaining in accounts terminated due to 
                 terms of service violations.
               </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">4. Subscription Cancellation</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-2xl font-display font-semibold text-foreground mb-4">4. Subscription Cancellation</h2>
+            <p className="text-muted-foreground leading-relaxed">
               If you have an active subscription:
             </p>
-            <ul className="list-disc pl-6 text-gray-600 space-y-3 mt-4">
+            <ul className="list-disc pl-6 text-muted-foreground space-y-3 mt-4">
               <li>You may cancel your subscription at any time from your account settings</li>
               <li>Cancellation takes effect at the end of the current billing period</li>
               <li>You will retain access to subscription benefits until the period ends</li>
@@ -155,39 +155,39 @@ const RefundPolicy = () => {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">5. How to Request a Refund</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-2xl font-display font-semibold text-foreground mb-4">5. How to Request a Refund</h2>
+            <p className="text-muted-foreground leading-relaxed">
               To request a refund, follow these steps:
             </p>
-            <ol className="list-decimal pl-6 text-gray-600 space-y-3 mt-4">
+            <ol className="list-decimal pl-6 text-muted-foreground space-y-3 mt-4">
               <li>
-                <strong>Contact Support:</strong> Email{" "}
-                <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">
+                <strong className="text-foreground">Contact Support:</strong> Email{" "}
+                <a href="mailto:support@istilal.com" className="text-primary hover:underline">
                   support@istilal.com
                 </a>{" "}
                 with the subject line "Refund Request"
               </li>
               <li>
-                <strong>Provide Details:</strong> Include your account email, transaction ID or 
+                <strong className="text-foreground">Provide Details:</strong> Include your account email, transaction ID or 
                 payment reference, date of purchase, and reason for the refund request
               </li>
               <li>
-                <strong>Wait for Review:</strong> Our team will review your request within 3-5 
+                <strong className="text-foreground">Wait for Review:</strong> Our team will review your request within 3-5 
                 business days
               </li>
               <li>
-                <strong>Receive Response:</strong> We will email you with our decision and any 
+                <strong className="text-foreground">Receive Response:</strong> We will email you with our decision and any 
                 next steps
               </li>
             </ol>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">6. Refund Processing</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-2xl font-display font-semibold text-foreground mb-4">6. Refund Processing</h2>
+            <p className="text-muted-foreground leading-relaxed">
               If your refund is approved:
             </p>
-            <ul className="list-disc pl-6 text-gray-600 space-y-3 mt-4">
+            <ul className="list-disc pl-6 text-muted-foreground space-y-3 mt-4">
               <li>Refunds will be processed to the original payment method</li>
               <li>Processing time is typically 5-10 business days, depending on your payment provider</li>
               <li>You will receive email confirmation when the refund is initiated</li>
@@ -196,30 +196,30 @@ const RefundPolicy = () => {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Disputes</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-2xl font-display font-semibold text-foreground mb-4">7. Disputes</h2>
+            <p className="text-muted-foreground leading-relaxed">
               If you believe a refund was incorrectly denied, you may:
             </p>
-            <ul className="list-disc pl-6 text-gray-600 space-y-3 mt-4">
+            <ul className="list-disc pl-6 text-muted-foreground space-y-3 mt-4">
               <li>Reply to our decision email with additional information</li>
               <li>Request escalation to a senior support representative</li>
               <li>Contact your payment provider directly for payment disputes</li>
             </ul>
-            <p className="text-gray-600 leading-relaxed mt-4">
+            <p className="text-muted-foreground leading-relaxed mt-4">
               We encourage customers to contact us before initiating chargebacks, as we are 
               committed to resolving issues fairly.
             </p>
           </section>
 
-          <section className="bg-gray-50 rounded-xl p-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Contact Us</h2>
-            <p className="text-gray-600">
+          <section className="bg-muted/50 rounded-xl p-6 border border-border">
+            <h2 className="text-2xl font-display font-semibold text-foreground mb-4">Contact Us</h2>
+            <p className="text-muted-foreground">
               For refund requests or questions about this policy, contact:{" "}
-              <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">
+              <a href="mailto:support@istilal.com" className="text-primary hover:underline">
                 support@istilal.com
               </a>
             </p>
-            <p className="text-gray-500 text-sm mt-4">
+            <p className="text-muted-foreground text-sm mt-4">
               Response time: Within 1-2 business days
             </p>
           </section>
@@ -227,16 +227,16 @@ const RefundPolicy = () => {
       </main>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-gray-100 bg-white mt-16">
+      <footer className="py-8 px-4 border-t border-border bg-card mt-16">
         <div className="max-w-6xl mx-auto text-center space-y-2">
-          <p className="text-gray-600 text-sm">
+          <p className="text-foreground text-sm">
             © {new Date().getFullYear()} Istilal. All rights reserved.
           </p>
-          <p className="text-gray-500 text-xs">
+          <p className="text-muted-foreground text-xs">
             Check originality. Protect academic integrity.
           </p>
-          <p className="text-gray-500 text-xs">
-            Contact: <a href="mailto:support@istilal.com" className="text-blue-700 hover:underline">support@istilal.com</a>
+          <p className="text-muted-foreground text-xs">
+            Contact: <a href="mailto:support@istilal.com" className="text-primary hover:underline">support@istilal.com</a>
           </p>
         </div>
       </footer>
