@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export const useWhatsApp = () => {
   const { user, profile } = useAuth();
-  const [whatsappNumber, setWhatsappNumber] = useState<string>('+447360536649');
+  const [whatsappNumber, setWhatsappNumber] = useState<string>('+9647819476757');
 
   useEffect(() => {
     // Defer API call to not block initial render
