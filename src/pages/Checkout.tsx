@@ -357,6 +357,82 @@ export default function Checkout() {
     openWhatsAppCustom(message);
   };
 
+  // Handle free order (100% discount)
+  const handleFreeOrder = async () => {
+    if (!user) {
+      toast.error('Please login to complete your order');
+      return;
+    }
+
+    setCreatingPayment('free');
+    try {
+      const totalCredits = getTotalCredits();
+      
+      // Get current balance
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('credit_balance')
+        .eq('id', user.id)
+        .single();
+
+      const currentBalance = currentProfile?.credit_balance || 0;
+      const newBalance = currentBalance + totalCredits;
+
+      // Update user's credit balance
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ credit_balance: newBalance })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Log the transaction
+      await supabase.from('credit_transactions').insert({
+        user_id: user.id,
+        amount: totalCredits,
+        balance_before: currentBalance,
+        balance_after: newBalance,
+        transaction_type: 'promo_credit',
+        description: `Free order with promo code: ${appliedPromo?.code || 'N/A'}`,
+      });
+
+      // Record promo code usage if applicable
+      if (appliedPromo?.code) {
+        const { data: promoData } = await supabase
+          .from('promo_codes')
+          .select('id, current_uses')
+          .eq('code', appliedPromo.code.toUpperCase())
+          .single();
+
+        if (promoData) {
+          await supabase.from('promo_code_uses').insert({
+            promo_code_id: promoData.id,
+            user_id: user.id,
+            credits_given: totalCredits,
+          });
+
+          await supabase
+            .from('promo_codes')
+            .update({ current_uses: (promoData.current_uses || 0) + 1 })
+            .eq('id', promoData.id);
+        }
+      }
+
+      toast.success(`${totalCredits} credits have been added to your account!`);
+      clearCart();
+      setAppliedPromo(null);
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error('Free order error:', error);
+      toast.error(error.message || 'Failed to complete order');
+    } finally {
+      setCreatingPayment(null);
+    }
+  };
+
+  // Check if order is free
+  const isFreeOrder = getDiscountedTotal() === 0;
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -495,38 +571,37 @@ export default function Checkout() {
                 <CardDescription>Choose how you want to pay for your credits</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Viva.com Card Payment */}
-                {vivaEnabled && (
-                  <div className="border rounded-lg p-4 hover:border-primary transition-colors">
+                {/* Free Order (100% Discount) */}
+                {isFreeOrder && (
+                  <div className="border-2 border-green-500 rounded-lg p-4 bg-green-50 dark:bg-green-950/20">
                     <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-[#1A1F71]/10 flex items-center justify-center flex-shrink-0">
-                        <Globe className="h-6 w-6 text-[#1A1F71]" />
+                      <div className="h-12 w-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle className="h-6 w-6 text-green-500" />
                       </div>
                       <div className="flex-1 space-y-3">
                         <div>
                           <h3 className="font-semibold flex items-center gap-2">
-                            Card Payment (Viva.com)
-                            <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                            Free Order
+                            <Badge className="bg-green-500 text-white text-xs">100% Off</Badge>
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            Pay securely with Visa, Mastercard, or other debit/credit cards
-                            {fees.viva > 0 && <span className="text-amber-600"> (+{fees.viva}% fee)</span>}
+                            Your promo code covers the entire order! Click below to claim your credits.
                           </p>
                         </div>
                         <Button 
-                          className="w-full bg-[#1A1F71] hover:bg-[#1A1F71]/90"
-                          onClick={createVivaPayment}
-                          disabled={creatingVivaPayment}
+                          className="w-full bg-green-600 hover:bg-green-700"
+                          onClick={handleFreeOrder}
+                          disabled={creatingPayment === 'free'}
                         >
-                          {creatingVivaPayment ? (
+                          {creatingPayment === 'free' ? (
                             <>
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                               Processing...
                             </>
                           ) : (
                             <>
-                              <CreditCard className="h-4 w-4 mr-2" />
-                              Pay ${calculateTotalWithFee('viva')} with Card
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Claim {getTotalCredits()} Free Credits
                             </>
                           )}
                         </Button>
@@ -535,99 +610,144 @@ export default function Checkout() {
                   </div>
                 )}
 
-                {/* Binance Pay */}
-                {binanceEnabled && (
-                  <div className="border rounded-lg p-4 hover:border-primary transition-colors">
-                    <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-[#F0B90B]/10 flex items-center justify-center flex-shrink-0">
-                        <Wallet className="h-6 w-6 text-[#F0B90B]" />
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <div>
-                          <h3 className="font-semibold">Binance Pay</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Pay instantly using your Binance wallet
-                          </p>
+                {/* Regular Payment Methods (only show if not a free order) */}
+                {!isFreeOrder && (
+                  <>
+                    {/* Viva.com Card Payment */}
+                    {vivaEnabled && (
+                      <div className="border rounded-lg p-4 hover:border-primary transition-colors">
+                        <div className="flex items-start gap-4">
+                          <div className="h-12 w-12 rounded-xl bg-[#1A1F71]/10 flex items-center justify-center flex-shrink-0">
+                            <Globe className="h-6 w-6 text-[#1A1F71]" />
+                          </div>
+                          <div className="flex-1 space-y-3">
+                            <div>
+                              <h3 className="font-semibold flex items-center gap-2">
+                                Card Payment (Viva.com)
+                                <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                              </h3>
+                              <p className="text-sm text-muted-foreground">
+                                Pay securely with Visa, Mastercard, or other debit/credit cards
+                                {fees.viva > 0 && <span className="text-amber-600"> (+{fees.viva}% fee)</span>}
+                              </p>
+                            </div>
+                            <Button 
+                              className="w-full bg-[#1A1F71] hover:bg-[#1A1F71]/90"
+                              onClick={createVivaPayment}
+                              disabled={creatingVivaPayment}
+                            >
+                              {creatingVivaPayment ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : (
+                                <>
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  Pay ${calculateTotalWithFee('viva')} with Card
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </div>
-                        <Button 
-                          className="w-full bg-[#F0B90B] hover:bg-[#D4A50A] text-black"
-                          onClick={openBinancePayment}
-                        >
-                          <Wallet className="h-4 w-4 mr-2" />
-                          Pay with Binance Pay
-                        </Button>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                {/* USDT Payment */}
-                {usdtEnabled && (
-                  <div className="border rounded-lg p-4 hover:border-primary transition-colors">
-                    <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                        <Bitcoin className="h-6 w-6 text-green-500" />
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <div>
-                          <h3 className="font-semibold">USDT (TRC20)</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Pay with USDT cryptocurrency on TRC20 network
-                          </p>
+                    {/* Binance Pay */}
+                    {binanceEnabled && (
+                      <div className="border rounded-lg p-4 hover:border-primary transition-colors">
+                        <div className="flex items-start gap-4">
+                          <div className="h-12 w-12 rounded-xl bg-[#F0B90B]/10 flex items-center justify-center flex-shrink-0">
+                            <Wallet className="h-6 w-6 text-[#F0B90B]" />
+                          </div>
+                          <div className="flex-1 space-y-3">
+                            <div>
+                              <h3 className="font-semibold">Binance Pay</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Pay instantly using your Binance wallet
+                              </p>
+                            </div>
+                            <Button 
+                              className="w-full bg-[#F0B90B] hover:bg-[#D4A50A] text-black"
+                              onClick={openBinancePayment}
+                            >
+                              <Wallet className="h-4 w-4 mr-2" />
+                              Pay with Binance Pay
+                            </Button>
+                          </div>
                         </div>
-                        <Button 
-                          className="w-full bg-green-600 hover:bg-green-700"
-                          onClick={createCryptoPayment}
-                          disabled={creatingPayment === 'usdt'}
-                        >
-                          {creatingPayment === 'usdt' ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Creating Payment...
-                            </>
-                          ) : (
-                            <>
-                              <Bitcoin className="h-4 w-4 mr-2" />
-                              Pay with USDT
-                            </>
-                          )}
-                        </Button>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                {/* WhatsApp Payment */}
-                {whatsappEnabled && (
-                  <div className="border rounded-lg p-4 hover:border-primary transition-colors">
-                    <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-[#25D366]/10 flex items-center justify-center flex-shrink-0">
-                        <MessageCircle className="h-6 w-6 text-[#25D366]" />
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <div>
-                          <h3 className="font-semibold">WhatsApp Support</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Contact us on WhatsApp for manual payment assistance
-                          </p>
+                    {/* USDT Payment */}
+                    {usdtEnabled && (
+                      <div className="border rounded-lg p-4 hover:border-primary transition-colors">
+                        <div className="flex items-start gap-4">
+                          <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                            <Bitcoin className="h-6 w-6 text-green-500" />
+                          </div>
+                          <div className="flex-1 space-y-3">
+                            <div>
+                              <h3 className="font-semibold">USDT (TRC20)</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Pay with USDT cryptocurrency on TRC20 network
+                              </p>
+                            </div>
+                            <Button 
+                              className="w-full bg-green-600 hover:bg-green-700"
+                              onClick={createCryptoPayment}
+                              disabled={creatingPayment === 'usdt'}
+                            >
+                              {creatingPayment === 'usdt' ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Creating Payment...
+                                </>
+                              ) : (
+                                <>
+                                  <Bitcoin className="h-4 w-4 mr-2" />
+                                  Pay with USDT
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </div>
-                        <Button 
-                          className="w-full bg-[#25D366] hover:bg-[#1DA851]"
-                          onClick={handleWhatsAppPayment}
-                        >
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          Pay via WhatsApp
-                        </Button>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                {!vivaEnabled && !binanceEnabled && !usdtEnabled && !whatsappEnabled && (
-                  <div className="text-center py-8">
-                    <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No payment methods are currently available. Please contact support.</p>
-                  </div>
+                    {/* WhatsApp Payment */}
+                    {whatsappEnabled && (
+                      <div className="border rounded-lg p-4 hover:border-primary transition-colors">
+                        <div className="flex items-start gap-4">
+                          <div className="h-12 w-12 rounded-xl bg-[#25D366]/10 flex items-center justify-center flex-shrink-0">
+                            <MessageCircle className="h-6 w-6 text-[#25D366]" />
+                          </div>
+                          <div className="flex-1 space-y-3">
+                            <div>
+                              <h3 className="font-semibold">WhatsApp Support</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Contact us on WhatsApp for manual payment assistance
+                              </p>
+                            </div>
+                            <Button 
+                              className="w-full bg-[#25D366] hover:bg-[#1DA851]"
+                              onClick={handleWhatsAppPayment}
+                            >
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Pay via WhatsApp
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!vivaEnabled && !binanceEnabled && !usdtEnabled && !whatsappEnabled && (
+                      <div className="text-center py-8">
+                        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">No payment methods are currently available. Please contact support.</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
