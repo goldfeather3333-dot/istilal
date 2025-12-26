@@ -392,6 +392,9 @@ export type Database = {
           assigned_staff_id: string | null
           completed_at: string | null
           error_message: string | null
+          exclude_bibliographic: boolean | null
+          exclude_quoted: boolean | null
+          exclude_small_sources: boolean | null
           file_name: string
           file_path: string
           id: string
@@ -417,6 +420,9 @@ export type Database = {
           assigned_staff_id?: string | null
           completed_at?: string | null
           error_message?: string | null
+          exclude_bibliographic?: boolean | null
+          exclude_quoted?: boolean | null
+          exclude_small_sources?: boolean | null
           file_name: string
           file_path: string
           id?: string
@@ -442,6 +448,9 @@ export type Database = {
           assigned_staff_id?: string | null
           completed_at?: string | null
           error_message?: string | null
+          exclude_bibliographic?: boolean | null
+          exclude_quoted?: boolean | null
+          exclude_small_sources?: boolean | null
           file_name?: string
           file_path?: string
           id?: string
