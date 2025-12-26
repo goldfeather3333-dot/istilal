@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SENDPULSE_API_KEY = Deno.env.get("SENDPLUS_API_KEY");
 const SENDPULSE_API_SECRET = Deno.env.get("SENDPLUS_API_SECRET");
-const SENDPULSE_FROM_EMAIL = Deno.env.get("SENDPLUS_FROM_EMAIL") || "noreply@plagaiscans.com";
+const SENDPULSE_FROM_EMAIL = Deno.env.get("SENDPLUS_FROM_EMAIL") || "noreply@istilal.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,7 +61,7 @@ async function sendEmailViaSendPulse(
         html: htmlBase64,
         subject: subject,
         from: {
-          name: "PlagaiScans",
+          name: "Istilal",
           email: SENDPULSE_FROM_EMAIL,
         },
         to: [
@@ -135,7 +135,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const userName = fullName || "Customer";
-    const siteUrl = Deno.env.get("SITE_URL") || "https://plagaiscans.com";
+    const siteUrl = Deno.env.get("SITE_URL") || "https://istilal.com";
 
     const token = await getSendPulseToken();
 
@@ -150,19 +150,19 @@ const handler = async (req: Request): Promise<Response> => {
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
           <div style="background-color: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;">
+              <div style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;">
                 <span style="color: white; font-size: 28px;">🎉</span>
               </div>
             </div>
             
-            <h1 style="color: #18181b; text-align: center; margin: 0 0 10px 0; font-size: 24px;">Welcome to PlagaiScans!</h1>
+            <h1 style="color: #18181b; text-align: center; margin: 0 0 10px 0; font-size: 24px;">Welcome to Istilal!</h1>
             
             <p style="color: #71717a; text-align: center; margin: 0 0 30px 0;">Hello ${userName}, thank you for joining us!</p>
             
             <div style="background-color: #f4f4f5; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h3 style="color: #18181b; margin: 0 0 15px 0;">What you can do:</h3>
               <ul style="color: #71717a; margin: 0; padding-left: 20px;">
-                <li style="margin-bottom: 10px;">Upload documents for plagiarism and AI detection</li>
+                <li style="margin-bottom: 10px;">Upload documents for similarity and AI detection</li>
                 <li style="margin-bottom: 10px;">Get detailed similarity and AI reports</li>
                 <li style="margin-bottom: 10px;">Download professional reports</li>
                 <li style="margin-bottom: 0;">Track all your documents in one place</li>
@@ -175,14 +175,14 @@ const handler = async (req: Request): Promise<Response> => {
             
             <div style="text-align: center;">
               <a href="${siteUrl}/dashboard" 
-                 style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">
+                 style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">
                 Go to Dashboard
               </a>
             </div>
             
             <p style="color: #a1a1aa; text-align: center; margin: 30px 0 0 0; font-size: 12px;">
               If you have any questions, contact us via WhatsApp support.<br>
-              Thank you for choosing PlagaiScans! 🙏
+              Thank you for choosing Istilal! 🙏
             </p>
           </div>
         </div>
@@ -193,7 +193,7 @@ const handler = async (req: Request): Promise<Response> => {
     await sendEmailViaSendPulse(
       token,
       { email, name: userName },
-      "Welcome to PlagaiScans! 🎉",
+      "Welcome to Istilal! 🎉",
       htmlContent
     );
 

@@ -612,13 +612,13 @@ export const DashboardSidebar: React.FC = () => {
       >
         <div className="p-6 border-b border-border">
           <Link to="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
-            <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
-              <FileCheck className="h-5 w-5 text-primary-foreground" />
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+              <FileCheck className="h-5 w-5 text-white" />
             </div>
-            <span className="font-display font-bold text-lg">PlagaiScans</span>
+            <span className="font-display font-bold text-lg bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Istilal</span>
           </Link>
           <div className="flex items-center gap-1.5 mt-2 ml-10">
-            <span className="text-xs text-muted-foreground">Advanced Plagiarism Detection</span>
+            <span className="text-xs text-muted-foreground">Document Similarity Detection</span>
           </div>
         </div>
 

@@ -18,8 +18,13 @@ const Navigation = () => {
       <div className="container-width px-6 md:px-12">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <a href="#" className="text-xl md:text-2xl font-display font-bold gradient-text">
-            STUDIO
+          <a href="#" className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-sm">I</span>
+            </div>
+            <span className="text-xl md:text-2xl font-display font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+              Istilal
+            </span>
           </a>
 
           {/* Desktop Navigation */}

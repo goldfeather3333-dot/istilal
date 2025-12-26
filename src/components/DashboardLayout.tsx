@@ -9,10 +9,10 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-emerald-50/10 dark:to-emerald-950/10">
       <DashboardHeader />
       <DashboardSidebar />
-      <main className="p-8 pt-24">
+      <main className="p-4 md:p-8 pt-20 md:pt-24">
         {children}
       </main>
       <WhatsAppSupportButton />
