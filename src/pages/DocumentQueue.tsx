@@ -36,6 +36,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ExclusionOptionsDisplay } from '@/components/ExclusionOptionsDisplay';
+import { AdminEditPercentages } from '@/components/AdminEditPercentages';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface StaffSettings {
   time_limit_minutes: number;
@@ -630,6 +633,7 @@ export default function DocumentQueue() {
                         <TableHead>Document</TableHead>
                         <TableHead>Upload Time</TableHead>
                         <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-center">Exclusions</TableHead>
                         <TableHead className="text-center">Processing By</TableHead>
                         <TableHead className="text-center">Time Elapsed</TableHead>
                         <TableHead className="text-center">Actions</TableHead>
@@ -675,6 +679,24 @@ export default function DocumentQueue() {
                             </TableCell>
                             <TableCell className="text-center">
                               <StatusBadge status={doc.status} />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-block">
+                                      <ExclusionOptionsDisplay
+                                        excludeBibliographic={(doc as any).exclude_bibliographic}
+                                        excludeQuoted={(doc as any).exclude_quoted}
+                                        excludeSmallSources={(doc as any).exclude_small_sources}
+                                      />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Researcher selected exclusion options</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </TableCell>
                             <TableCell className="text-center">
                               {isAssignedToMe ? (
