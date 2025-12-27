@@ -222,13 +222,25 @@ export default function Auth() {
 
       toast({
         title: 'Password updated!',
-        description: 'Your password has been successfully reset.',
+        description: 'Your password has been successfully reset. Please login with your new password.',
       });
-      navigate('/dashboard');
+      
+      // Sign out and redirect to login
+      await supabase.auth.signOut();
+      navigate('/auth');
     } catch (error: any) {
+      let errorMessage = error.message || 'Failed to reset password. Please try again.';
+      
+      // Handle specific error cases with user-friendly messages
+      if (error.message?.includes('same password') || error.code === 'same_password') {
+        errorMessage = 'New password must be different from your current password.';
+      } else if (error.message?.includes('expired') || error.message?.includes('invalid')) {
+        errorMessage = 'This reset link has expired. Please request a new password reset.';
+      }
+      
       toast({
         title: 'Error',
-        description: error.message || 'Failed to reset password. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
