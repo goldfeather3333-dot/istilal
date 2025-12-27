@@ -7,10 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface EmailRequest {
-  userId: string;
+interface PaymentVerifiedRequest {
+  email: string;
+  customerName?: string;
   credits: number;
-  amountUsd: number;
+  amount: number;
   paymentMethod: string;
 }
 
@@ -39,37 +40,9 @@ async function isEmailEnabled(supabase: any, settingKey: string): Promise<boolea
     .from('email_settings')
     .select('is_enabled')
     .eq('setting_key', settingKey)
-    .maybeSingle();
-  return data?.is_enabled ?? true;
-}
-
-async function sendEmail(config: any, to: string, subject: string, html: string): Promise<void> {
-  console.log('Connecting to SMTP server:', config.host, 'port:', config.port);
+    .single();
   
-  const client = new SMTPClient({
-    connection: {
-      hostname: config.host,
-      port: config.port,
-      tls: true,
-      auth: {
-        username: config.user,
-        password: config.password,
-      },
-    },
-  });
-
-  try {
-    await client.send({
-      from: `Istilal <${config.fromEmail}>`,
-      to: to,
-      subject: subject,
-      content: "auto",
-      html: html,
-    });
-    console.log('Email sent successfully to:', to);
-  } finally {
-    await client.close();
-  }
+  return data?.is_enabled !== false;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -78,32 +51,22 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { userId, credits, amountUsd, paymentMethod }: EmailRequest = await req.json();
-    console.log('Processing payment verified email for user:', userId);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const enabled = await isEmailEnabled(supabase, 'payment_verified');
-    if (!enabled) {
-      console.log('Payment verified emails are disabled');
+    // Check if payment verified email is enabled
+    const isEnabled = await isEmailEnabled(supabase, 'payment_verified');
+    if (!isEnabled) {
+      console.log('Payment verified email is disabled in settings');
       return new Response(
-        JSON.stringify({ success: true, skipped: true, message: 'Payment verified emails are disabled' }),
+        JSON.stringify({ success: true, message: 'Email disabled in settings' }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('email, full_name, credit_balance')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || !profile?.email) {
-      throw new Error('User email not found');
-    }
+    const { email, customerName, credits, amount, paymentMethod }: PaymentVerifiedRequest = await req.json();
+    console.log('Sending payment verified email to:', email);
 
     const config = await getSmtpConfig(supabase);
     
@@ -111,74 +74,73 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('SMTP credentials not configured');
     }
 
-    const userName = profile.full_name || profile.email.split('@')[0];
-    const siteUrl = "https://istilal.com";
-    const methodDisplay = paymentMethod === 'binance_pay' ? 'Binance Pay' : paymentMethod;
-    
-    const htmlContent = `
+    const client = new SMTPClient({
+      connection: {
+        hostname: config.host,
+        port: config.port,
+        tls: true,
+        auth: {
+          username: config.user,
+          password: config.password,
+        },
+      },
+    });
+
+    const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f5;">
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa;">
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <div style="background-color: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <div style="background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;">
-                <span style="color: white; font-size: 28px;">✓</span>
-              </div>
+              <h1 style="color: #2d5a27; margin: 0; font-size: 28px;">Payment Confirmed! 💳</h1>
             </div>
-            
-            <h1 style="color: #18181b; text-align: center; margin: 0 0 10px 0; font-size: 24px;">Payment Verified!</h1>
-            
-            <p style="color: #71717a; text-align: center; margin: 0 0 30px 0;">Hello ${userName}, your payment has been verified and credits have been added to your account.</p>
-            
-            <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center;">
-              <p style="margin: 0 0 5px 0; color: #166534; font-size: 14px;">Credits Added</p>
-              <p style="margin: 0; color: #166534; font-size: 36px; font-weight: bold;">+${credits}</p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              Hello ${customerName || 'there'},
+            </p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              Your payment has been verified and credits have been added to your account.
+            </p>
+            <div style="background-color: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 16px;">Payment Details</h3>
+              <p style="color: #374151; margin: 5px 0;"><strong>Credits Added:</strong> ${credits}</p>
+              <p style="color: #374151; margin: 5px 0;"><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+              <p style="color: #374151; margin: 5px 0;"><strong>Payment Method:</strong> ${paymentMethod}</p>
             </div>
-            
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
-              <tr>
-                <td style="width: 48%; background-color: #f4f4f5; border-radius: 8px; padding: 15px; text-align: center;">
-                  <p style="margin: 0 0 5px 0; color: #71717a; font-size: 12px;">Amount Paid</p>
-                  <p style="margin: 0; color: #18181b; font-size: 18px; font-weight: 600;">$${amountUsd}</p>
-                </td>
-                <td style="width: 4%;"></td>
-                <td style="width: 48%; background-color: #f4f4f5; border-radius: 8px; padding: 15px; text-align: center;">
-                  <p style="margin: 0 0 5px 0; color: #71717a; font-size: 12px;">Payment Method</p>
-                  <p style="margin: 0; color: #18181b; font-size: 18px; font-weight: 600;">${methodDisplay}</p>
-                </td>
-              </tr>
-            </table>
-            
-            <div style="background-color: #fef3c7; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center;">
-              <p style="margin: 0 0 5px 0; color: #92400e; font-size: 12px;">New Balance</p>
-              <p style="margin: 0; color: #92400e; font-size: 24px; font-weight: bold;">${profile.credit_balance} Credits</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://istilal.com/dashboard" style="display: inline-block; background-color: #2d5a27; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">Go to Dashboard</a>
             </div>
-            
-            <div style="text-align: center;">
-              <a href="${siteUrl}/dashboard/upload" 
-                 style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">
-                Upload Document Now
-              </a>
-            </div>
-            
-            <p style="color: #a1a1aa; text-align: center; margin: 30px 0 0 0; font-size: 12px;">
-              Thank you for using Istilal. If you have any questions, please contact support.
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              Thank you for your purchase!
             </p>
           </div>
+          <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 20px;">
+            © 2024 Istilal. All rights reserved.
+          </p>
         </div>
       </body>
       </html>
     `;
 
-    await sendEmail(config, profile.email, 'Payment Verified - Credits Added! - Istilal', htmlContent);
+    try {
+      await client.send({
+        from: `Istilal <${config.fromEmail}>`,
+        to: email,
+        subject: 'Payment Confirmed - Credits Added! 💳',
+        content: "auto",
+        html,
+      });
+      console.log('Payment verified email sent successfully');
+    } finally {
+      await client.close();
+    }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Payment verified email sent' }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {

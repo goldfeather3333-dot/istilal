@@ -7,12 +7,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface EmailRequest {
-  documentId: string;
-  userId: string;
-  fileName: string;
+interface CompletionEmailRequest {
+  email: string;
+  documentName: string;
   similarityPercentage?: number;
   aiPercentage?: number;
+  customerName?: string;
 }
 
 async function getSmtpConfig(supabase: any) {
@@ -40,37 +40,9 @@ async function isEmailEnabled(supabase: any, settingKey: string): Promise<boolea
     .from('email_settings')
     .select('is_enabled')
     .eq('setting_key', settingKey)
-    .maybeSingle();
-  return data?.is_enabled ?? true;
-}
-
-async function sendEmail(config: any, to: string, subject: string, html: string): Promise<void> {
-  console.log('Connecting to SMTP server:', config.host, 'port:', config.port);
+    .single();
   
-  const client = new SMTPClient({
-    connection: {
-      hostname: config.host,
-      port: config.port,
-      tls: true,
-      auth: {
-        username: config.user,
-        password: config.password,
-      },
-    },
-  });
-
-  try {
-    await client.send({
-      from: `Istilal <${config.fromEmail}>`,
-      to: to,
-      subject: subject,
-      content: "auto",
-      html: html,
-    });
-    console.log('Email sent successfully to:', to);
-  } finally {
-    await client.close();
-  }
+  return data?.is_enabled !== false;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -79,32 +51,22 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { documentId, userId, fileName, similarityPercentage = 0, aiPercentage = 0 }: EmailRequest = await req.json();
-    console.log('Processing completion email for document:', fileName);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const enabled = await isEmailEnabled(supabase, 'document_completion');
-    if (!enabled) {
-      console.log('Document completion emails are disabled');
+    // Check if document completion email is enabled
+    const isEnabled = await isEmailEnabled(supabase, 'document_completion');
+    if (!isEnabled) {
+      console.log('Document completion email is disabled in settings');
       return new Response(
-        JSON.stringify({ success: true, skipped: true, message: 'Document completion emails are disabled' }),
+        JSON.stringify({ success: true, message: 'Email disabled in settings' }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('email, full_name')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || !profile?.email) {
-      throw new Error('User email not found');
-    }
+    const { email, documentName, similarityPercentage, aiPercentage, customerName }: CompletionEmailRequest = await req.json();
+    console.log('Sending completion email to:', email, 'for document:', documentName);
 
     const config = await getSmtpConfig(supabase);
     
@@ -112,68 +74,74 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('SMTP credentials not configured');
     }
 
-    const userName = profile.full_name || profile.email.split('@')[0];
-    const siteUrl = "https://istilal.com";
-    
-    const htmlContent = `
+    const client = new SMTPClient({
+      connection: {
+        hostname: config.host,
+        port: config.port,
+        tls: true,
+        auth: {
+          username: config.user,
+          password: config.password,
+        },
+      },
+    });
+
+    const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f5;">
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa;">
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <div style="background-color: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <div style="background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;">
-                <span style="color: white; font-size: 28px;">✓</span>
-              </div>
+              <h1 style="color: #2d5a27; margin: 0; font-size: 28px;">Document Ready! ✅</h1>
             </div>
-            
-            <h1 style="color: #18181b; text-align: center; margin: 0 0 10px 0; font-size: 24px;">Document Processing Complete!</h1>
-            
-            <p style="color: #71717a; text-align: center; margin: 0 0 30px 0;">Hello ${userName}, your document has been analyzed.</p>
-            
-            <div style="background-color: #f4f4f5; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-              <p style="margin: 0 0 10px 0; color: #71717a; font-size: 14px;">Document</p>
-              <p style="margin: 0; color: #18181b; font-weight: 600;">${fileName}</p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              Hello ${customerName || 'there'},
+            </p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              Your document "<strong>${documentName}</strong>" has been processed and is ready for download.
+            </p>
+            ${similarityPercentage !== undefined || aiPercentage !== undefined ? `
+            <div style="background-color: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 16px;">Results Summary</h3>
+              ${similarityPercentage !== undefined ? `<p style="color: #374151; margin: 5px 0;"><strong>Similarity:</strong> ${similarityPercentage}%</p>` : ''}
+              ${aiPercentage !== undefined ? `<p style="color: #374151; margin: 5px 0;"><strong>AI Detection:</strong> ${aiPercentage}%</p>` : ''}
             </div>
-            
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
-              <tr>
-                <td style="width: 48%; background-color: #fef3c7; border-radius: 8px; padding: 20px; text-align: center;">
-                  <p style="margin: 0 0 5px 0; color: #92400e; font-size: 14px;">Similarity</p>
-                  <p style="margin: 0; color: #92400e; font-size: 28px; font-weight: bold;">${similarityPercentage}%</p>
-                </td>
-                <td style="width: 4%;"></td>
-                <td style="width: 48%; background-color: #dbeafe; border-radius: 8px; padding: 20px; text-align: center;">
-                  <p style="margin: 0 0 5px 0; color: #1e40af; font-size: 14px;">AI Detection</p>
-                  <p style="margin: 0; color: #1e40af; font-size: 28px; font-weight: bold;">${aiPercentage}%</p>
-                </td>
-              </tr>
-            </table>
-            
-            <div style="text-align: center;">
-              <a href="${siteUrl}/dashboard/documents" 
-                 style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">
-                View Full Report
-              </a>
+            ` : ''}
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://istilal.com/dashboard/documents" style="display: inline-block; background-color: #2d5a27; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">View Document</a>
             </div>
-            
-            <p style="color: #a1a1aa; text-align: center; margin: 30px 0 0 0; font-size: 12px;">
-              This is an automated email from Istilal. Please do not reply.
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              Thank you for using Istilal!
             </p>
           </div>
+          <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 20px;">
+            © 2024 Istilal. All rights reserved.
+          </p>
         </div>
       </body>
       </html>
     `;
 
-    await sendEmail(config, profile.email, 'Your Document Has Been Processed! - Istilal', htmlContent);
+    try {
+      await client.send({
+        from: `Istilal <${config.fromEmail}>`,
+        to: email,
+        subject: `Your Document "${documentName}" is Ready! ✅`,
+        content: "auto",
+        html,
+      });
+      console.log('Completion email sent successfully');
+    } finally {
+      await client.close();
+    }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Completion email sent' }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
