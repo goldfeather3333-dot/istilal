@@ -7,10 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface EmailRequest {
-  userId: string;
+interface WelcomeEmailRequest {
   email: string;
-  fullName?: string;
+  name: string;
 }
 
 async function getSmtpConfig(supabase: any) {
@@ -38,37 +37,9 @@ async function isEmailEnabled(supabase: any, settingKey: string): Promise<boolea
     .from('email_settings')
     .select('is_enabled')
     .eq('setting_key', settingKey)
-    .maybeSingle();
-  return data?.is_enabled ?? true;
-}
-
-async function sendEmail(config: any, to: string, subject: string, html: string): Promise<void> {
-  console.log('Connecting to SMTP server:', config.host, 'port:', config.port);
+    .single();
   
-  const client = new SMTPClient({
-    connection: {
-      hostname: config.host,
-      port: config.port,
-      tls: true,
-      auth: {
-        username: config.user,
-        password: config.password,
-      },
-    },
-  });
-
-  try {
-    await client.send({
-      from: `Istilal <${config.fromEmail}>`,
-      to: to,
-      subject: subject,
-      content: "auto",
-      html: html,
-    });
-    console.log('Email sent successfully to:', to);
-  } finally {
-    await client.close();
-  }
+  return data?.is_enabled !== false;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -77,21 +48,22 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { userId, email, fullName }: EmailRequest = await req.json();
-    console.log('Processing welcome email for:', email);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const enabled = await isEmailEnabled(supabase, 'welcome_email');
-    if (!enabled) {
-      console.log('Welcome emails are disabled');
+    // Check if welcome email is enabled
+    const isEnabled = await isEmailEnabled(supabase, 'welcome_email');
+    if (!isEnabled) {
+      console.log('Welcome email is disabled in settings');
       return new Response(
-        JSON.stringify({ success: true, skipped: true, message: 'Welcome emails are disabled' }),
+        JSON.stringify({ success: true, message: 'Email disabled in settings' }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    const { email, name }: WelcomeEmailRequest = await req.json();
+    console.log('Sending welcome email to:', email);
 
     const config = await getSmtpConfig(supabase);
     
@@ -99,64 +71,70 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('SMTP credentials not configured');
     }
 
-    const userName = fullName || email.split('@')[0];
-    const siteUrl = "https://istilal.com";
-    
-    const htmlContent = `
+    const client = new SMTPClient({
+      connection: {
+        hostname: config.host,
+        port: config.port,
+        tls: true,
+        auth: {
+          username: config.user,
+          password: config.password,
+        },
+      },
+    });
+
+    const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f5;">
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa;">
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <div style="background-color: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <div style="background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;">
-                <span style="color: white; font-size: 28px;">🎉</span>
-              </div>
+              <h1 style="color: #2d5a27; margin: 0; font-size: 28px;">Welcome to Istilal! 🎉</h1>
             </div>
-            
-            <h1 style="color: #18181b; text-align: center; margin: 0 0 10px 0; font-size: 24px;">Welcome to Istilal!</h1>
-            
-            <p style="color: #71717a; text-align: center; margin: 0 0 30px 0;">Hello ${userName}, thank you for joining us!</p>
-            
-            <div style="background-color: #f4f4f5; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-              <h3 style="color: #18181b; margin: 0 0 15px 0;">What you can do:</h3>
-              <ul style="color: #71717a; margin: 0; padding-left: 20px;">
-                <li style="margin-bottom: 10px;">Upload documents for similarity and AI detection</li>
-                <li style="margin-bottom: 10px;">Get detailed similarity and AI reports</li>
-                <li style="margin-bottom: 10px;">Download professional reports</li>
-                <li style="margin-bottom: 0;">Track all your documents in one place</li>
-              </ul>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              Hello ${name || 'there'},
+            </p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              Thank you for joining Istilal! We're excited to have you on board.
+            </p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+              Our platform provides professional document similarity detection services. Upload your documents and get detailed reports quickly and securely.
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://istilal.com/dashboard" style="display: inline-block; background-color: #2d5a27; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">Get Started</a>
             </div>
-            
-            <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center;">
-              <p style="margin: 0; color: #166534; font-weight: 600;">We ensure all files are processed securely using advanced similarity detection. Your data privacy is our priority.</p>
-            </div>
-            
-            <div style="text-align: center;">
-              <a href="${siteUrl}/dashboard" 
-                 style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">
-                Go to Dashboard
-              </a>
-            </div>
-            
-            <p style="color: #a1a1aa; text-align: center; margin: 30px 0 0 0; font-size: 12px;">
-              If you have any questions, contact us via WhatsApp support.<br>
-              Thank you for choosing Istilal! 🙏
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              If you have any questions, feel free to reach out to our support team.
             </p>
           </div>
+          <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 20px;">
+            © 2024 Istilal. All rights reserved.
+          </p>
         </div>
       </body>
       </html>
     `;
 
-    await sendEmail(config, email, 'Welcome to Istilal! 🎉', htmlContent);
+    try {
+      await client.send({
+        from: `Istilal <${config.fromEmail}>`,
+        to: email,
+        subject: 'Welcome to Istilal! 🎉',
+        content: "auto",
+        html,
+      });
+      console.log('Welcome email sent successfully');
+    } finally {
+      await client.close();
+    }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Welcome email sent' }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {

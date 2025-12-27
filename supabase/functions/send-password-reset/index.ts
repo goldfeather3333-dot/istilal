@@ -9,6 +9,7 @@ const corsHeaders = {
 
 interface PasswordResetRequest {
   email: string;
+  resetLink: string;
 }
 
 async function getSmtpConfig(supabase: any) {
@@ -36,37 +37,9 @@ async function isEmailEnabled(supabase: any, settingKey: string): Promise<boolea
     .from('email_settings')
     .select('is_enabled')
     .eq('setting_key', settingKey)
-    .maybeSingle();
-  return data?.is_enabled ?? true;
-}
-
-async function sendEmail(config: any, to: string, subject: string, html: string): Promise<void> {
-  console.log('Connecting to SMTP server:', config.host, 'port:', config.port);
+    .single();
   
-  const client = new SMTPClient({
-    connection: {
-      hostname: config.host,
-      port: config.port,
-      tls: true,
-      auth: {
-        username: config.user,
-        password: config.password,
-      },
-    },
-  });
-
-  try {
-    await client.send({
-      from: `Istilal <${config.fromEmail}>`,
-      to: to,
-      subject: subject,
-      content: "auto",
-      html: html,
-    });
-    console.log('Email sent successfully to:', to);
-  } finally {
-    await client.close();
-  }
+  return data?.is_enabled !== false;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -75,56 +48,22 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email }: PasswordResetRequest = await req.json();
-
-    if (!email) {
-      throw new Error("Email is required");
-    }
-
-    console.log('Processing password reset for:', email);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const enabled = await isEmailEnabled(supabase, 'password_reset');
-    if (!enabled) {
-      console.log('Password reset emails are disabled');
+    // Check if password reset email is enabled
+    const isEnabled = await isEmailEnabled(supabase, 'password_reset');
+    if (!isEnabled) {
+      console.log('Password reset email is disabled in settings');
       return new Response(
-        JSON.stringify({ success: false, message: 'Password reset emails are disabled' }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // Check if user exists
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (!profile) {
-      // Don't reveal if user exists or not for security
-      return new Response(
-        JSON.stringify({ success: true, message: 'If the email exists, a reset link has been sent' }),
+        JSON.stringify({ success: true, message: 'Email disabled in settings' }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const siteUrl = "https://istilal.com";
-
-    // Generate password reset link
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email: email,
-      options: {
-        redirectTo: `${siteUrl}/reset-password`,
-      },
-    });
-
-    if (linkError) {
-      throw linkError;
-    }
+    const { email, resetLink }: PasswordResetRequest = await req.json();
+    console.log('Sending password reset email to:', email);
 
     const config = await getSmtpConfig(supabase);
     
@@ -132,59 +71,70 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('SMTP credentials not configured');
     }
 
-    const userName = profile.full_name || email.split('@')[0];
-    const resetLink = linkData.properties?.action_link;
-    
-    const htmlContent = `
+    const client = new SMTPClient({
+      connection: {
+        hostname: config.host,
+        port: config.port,
+        tls: true,
+        auth: {
+          username: config.user,
+          password: config.password,
+        },
+      },
+    });
+
+    const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f5;">
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa;">
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <div style="background-color: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <div style="background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;">
-                <span style="color: white; font-size: 28px;">🔐</span>
-              </div>
+              <h1 style="color: #2d5a27; margin: 0; font-size: 28px;">Reset Your Password 🔐</h1>
             </div>
-            
-            <h1 style="color: #18181b; text-align: center; margin: 0 0 10px 0; font-size: 24px;">Reset Your Password</h1>
-            
-            <p style="color: #71717a; text-align: center; margin: 0 0 30px 0;">Hello ${userName}, we received a request to reset your password.</p>
-            
-            <div style="text-align: center; margin-bottom: 30px;">
-              <a href="${resetLink}" 
-                 style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600;">
-                Reset Password
-              </a>
-            </div>
-            
-            <p style="color: #71717a; text-align: center; margin: 0 0 20px 0; font-size: 14px;">
-              This link will expire in 24 hours.
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              Hello,
             </p>
-            
-            <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-              <p style="margin: 0; color: #92400e; font-size: 14px; text-align: center;">
-                If you didn't request this password reset, you can safely ignore this email.
-              </p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              We received a request to reset your password. Click the button below to create a new password.
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetLink}" style="display: inline-block; background-color: #2d5a27; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">Reset Password</a>
             </div>
-            
-            <p style="color: #a1a1aa; text-align: center; margin: 30px 0 0 0; font-size: 12px;">
-              This is an automated email from Istilal. Please do not reply.
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+              This link will expire in 1 hour for security reasons.
+            </p>
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              If you didn't request a password reset, please ignore this email or contact support if you have concerns.
             </p>
           </div>
+          <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 20px;">
+            © 2024 Istilal. All rights reserved.
+          </p>
         </div>
       </body>
       </html>
     `;
 
-    await sendEmail(config, email, 'Reset Your Password - Istilal', htmlContent);
+    try {
+      await client.send({
+        from: `Istilal <${config.fromEmail}>`,
+        to: email,
+        subject: 'Reset Your Password - Istilal',
+        content: "auto",
+        html,
+      });
+      console.log('Password reset email sent successfully');
+    } finally {
+      await client.close();
+    }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Password reset email sent' }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
