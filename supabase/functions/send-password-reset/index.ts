@@ -1,111 +1,75 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const SENDPULSE_API_KEY = Deno.env.get("SENDPLUS_API_KEY");
-const SENDPULSE_API_SECRET = Deno.env.get("SENDPLUS_API_SECRET");
-const SENDPULSE_FROM_EMAIL = Deno.env.get("SENDPLUS_FROM_EMAIL") || "noreply@plagaiscans.com";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface PasswordResetRequest {
   email: string;
 }
 
-// Get SendPulse access token
-async function getSendPulseToken(): Promise<string> {
-  const response = await fetch("https://api.sendpulse.com/oauth/access_token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      grant_type: "client_credentials",
-      client_id: SENDPULSE_API_KEY,
-      client_secret: SENDPULSE_API_SECRET,
-    }),
+async function getSmtpConfig(supabase: any) {
+  const { data: settings } = await supabase
+    .from('settings')
+    .select('key, value')
+    .in('key', ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from_email']);
+
+  const config: Record<string, string> = {};
+  settings?.forEach((s: any) => {
+    config[s.key] = s.value;
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("SendPulse auth error:", errorText);
-    throw new Error("Failed to authenticate with SendPulse");
-  }
-
-  const data = await response.json();
-  return data.access_token;
+  return {
+    host: config.smtp_host || Deno.env.get('SMTP_HOST') || 'mail.privateemail.com',
+    port: parseInt(config.smtp_port || Deno.env.get('SMTP_PORT') || '465'),
+    user: config.smtp_user || Deno.env.get('SMTP_USER') || '',
+    password: config.smtp_password || Deno.env.get('SMTP_PASSWORD') || '',
+    fromEmail: config.smtp_from_email || 'noreply@istilal.com',
+  };
 }
 
-// Send email via SendPulse SMTP API
-async function sendEmailViaSendPulse(
-  token: string,
-  to: { email: string; name?: string },
-  subject: string,
-  htmlContent: string
-): Promise<void> {
-  // Encode HTML content to Base64
-  const htmlBase64 = btoa(unescape(encodeURIComponent(htmlContent)));
-
-  const response = await fetch("https://api.sendpulse.com/smtp/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      email: {
-        html: htmlBase64,
-        subject: subject,
-        from: {
-          name: "PlagaiScans",
-          email: SENDPULSE_FROM_EMAIL,
-        },
-        to: [
-          {
-            email: to.email,
-            name: to.name || to.email,
-          },
-        ],
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("SendPulse send error:", errorText);
-    throw new Error(`Failed to send email: ${errorText}`);
-  }
-
-  const result = await response.json();
-  console.log("SendPulse response:", result);
-}
-
-// Check if email setting is enabled
 async function isEmailEnabled(supabase: any, settingKey: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('email_settings')
+    .select('is_enabled')
+    .eq('setting_key', settingKey)
+    .maybeSingle();
+  return data?.is_enabled ?? true;
+}
+
+async function sendEmail(config: any, to: string, subject: string, html: string): Promise<void> {
+  console.log('Connecting to SMTP server:', config.host, 'port:', config.port);
+  
+  const client = new SMTPClient({
+    connection: {
+      hostname: config.host,
+      port: config.port,
+      tls: true,
+      auth: {
+        username: config.user,
+        password: config.password,
+      },
+    },
+  });
+
   try {
-    const { data, error } = await supabase
-      .from("email_settings")
-      .select("is_enabled")
-      .eq("setting_key", settingKey)
-      .maybeSingle();
-    
-    if (error || !data) {
-      console.log(`Email setting ${settingKey} not found, defaulting to enabled`);
-      return true;
-    }
-    
-    return data.is_enabled;
-  } catch (error) {
-    console.error("Error checking email setting:", error);
-    return true;
+    await client.send({
+      from: `Istilal <${config.fromEmail}>`,
+      to: to,
+      subject: subject,
+      content: "auto",
+      html: html,
+    });
+    console.log('Email sent successfully to:', to);
+  } finally {
+    await client.close();
   }
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -117,76 +81,59 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Email is required");
     }
 
-    console.log("Processing password reset request for:", email);
+    console.log('Processing password reset for:', email);
 
-    // Check if SendPulse credentials are configured
-    if (!SENDPULSE_API_KEY || !SENDPULSE_API_SECRET) {
-      console.error("SendPulse credentials not configured");
-      throw new Error("Email service is not configured");
-    }
-
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if password reset emails are enabled
-    const isEnabled = await isEmailEnabled(supabase, "password_reset");
-    if (!isEnabled) {
-      console.log("Password reset emails are disabled by admin");
+    const enabled = await isEmailEnabled(supabase, 'password_reset');
+    if (!enabled) {
+      console.log('Password reset emails are disabled');
       return new Response(
-        JSON.stringify({ success: false, error: "Password reset is currently disabled. Please contact support." }),
+        JSON.stringify({ success: false, message: 'Password reset emails are disabled' }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Check if user exists in profiles using maybeSingle to avoid errors
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("email, full_name")
-      .eq("email", email)
+    // Check if user exists
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('email', email)
       .maybeSingle();
 
-    if (profileError) {
-      console.error("Error checking profile:", profileError);
-    }
-
     if (!profile) {
-      // Return success even if user doesn't exist (security best practice)
-      console.log("User not found, returning success anyway for security");
-      return new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      // Don't reveal if user exists or not for security
+      return new Response(
+        JSON.stringify({ success: true, message: 'If the email exists, a reset link has been sent' }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
-    // Generate password reset link using Supabase Auth
-    // IMPORTANT: Redirect to /reset-password page, NOT /auth
-    // This ensures the user sees the password reset form and cannot bypass it
-    // IMPORTANT: always use the canonical public site URL for the redirect.
-    // Using request Origin/Referer can point to the preview domain, which breaks production flows.
-    const siteUrl = Deno.env.get("SITE_URL") || "https://plagaiscans.com";
+    const siteUrl = "https://istilal.com";
 
-    const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
-      type: "recovery",
+    // Generate password reset link
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
       email: email,
       options: {
         redirectTo: `${siteUrl}/reset-password`,
       },
     });
 
-    if (resetError) {
-      console.error("Error generating reset link:", resetError);
-      throw new Error("Failed to generate reset link");
+    if (linkError) {
+      throw linkError;
     }
 
-    const resetLink = resetData.properties.action_link;
-    const userName = profile.full_name || "User";
+    const config = await getSmtpConfig(supabase);
+    
+    if (!config.user || !config.password) {
+      throw new Error('SMTP credentials not configured');
+    }
 
-    console.log("Sending password reset email to:", email);
-
-    // Get SendPulse token and send email
-    const token = await getSendPulseToken();
+    const userName = profile.full_name || email.split('@')[0];
+    const resetLink = linkData.properties?.action_link;
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -226,7 +173,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             
             <p style="color: #a1a1aa; text-align: center; margin: 30px 0 0 0; font-size: 12px;">
-              This is an automated email from PlagaiScans. Please do not reply.
+              This is an automated email from Istilal. Please do not reply.
             </p>
           </div>
         </div>
@@ -234,27 +181,17 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    await sendEmailViaSendPulse(
-      token,
-      { email: email, name: userName },
-      "Reset Your Password - PlagaiScans",
-      htmlContent
+    await sendEmail(config, email, 'Reset Your Password - Istilal', htmlContent);
+
+    return new Response(
+      JSON.stringify({ success: true, message: 'Password reset email sent' }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-
-    console.log("Password reset email sent successfully");
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
   } catch (error: any) {
-    console.error("Error in send-password-reset function:", error);
+    console.error("Error sending password reset email:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };

@@ -1,10 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface EmailRequest {
@@ -20,101 +20,55 @@ interface EmailRequest {
   logId?: string;
 }
 
-// Get SendPlus API access token
-async function getSendPlusToken(): Promise<string> {
-  const apiKey = Deno.env.get("SENDPLUS_API_KEY");
-  const apiSecret = Deno.env.get("SENDPLUS_API_SECRET");
+async function getSmtpConfig(supabase: any) {
+  const { data: settings } = await supabase
+    .from('settings')
+    .select('key, value')
+    .in('key', ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from_email']);
 
-  if (!apiKey || !apiSecret) {
-    throw new Error("SendPlus API credentials not configured");
-  }
-
-  const response = await fetch("https://api.sendpulse.com/oauth/access_token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "client_credentials",
-      client_id: apiKey,
-      client_secret: apiSecret
-    })
+  const config: Record<string, string> = {};
+  settings?.forEach((s: any) => {
+    config[s.key] = s.value;
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("SendPlus auth error:", error);
-    throw new Error("Failed to authenticate with SendPlus");
-  }
-
-  const data = await response.json();
-  return data.access_token;
+  return {
+    host: config.smtp_host || Deno.env.get('SMTP_HOST') || 'mail.privateemail.com',
+    port: parseInt(config.smtp_port || Deno.env.get('SMTP_PORT') || '465'),
+    user: config.smtp_user || Deno.env.get('SMTP_USER') || '',
+    password: config.smtp_password || Deno.env.get('SMTP_PASSWORD') || '',
+    fromEmail: config.smtp_from_email || 'noreply@istilal.com',
+  };
 }
 
-// Send email using SendPlus SMTP API - sends individually to protect privacy
-async function sendEmail(
-  token: string,
-  fromEmail: string,
-  toEmails: string[],
-  subject: string,
-  htmlContent: string
-): Promise<{ success: number; failed: number }> {
-  let successCount = 0;
-  let failedCount = 0;
+async function sendSingleEmail(config: any, to: string, subject: string, html: string): Promise<boolean> {
+  const client = new SMTPClient({
+    connection: {
+      hostname: config.host,
+      port: config.port,
+      tls: true,
+      auth: {
+        username: config.user,
+        password: config.password,
+      },
+    },
+  });
 
-  // SendPlus SMTP API - send individually to each recipient for privacy
-  // This ensures no recipient can see other recipients' email addresses
-  const batchSize = 10; // Process 10 individual emails at a time for rate limiting
-  
-  for (let i = 0; i < toEmails.length; i += batchSize) {
-    const batch = toEmails.slice(i, i + batchSize);
-    
-    // Send each email individually within the batch
-    const promises = batch.map(async (recipientEmail) => {
-      try {
-        const response = await fetch("https://api.sendpulse.com/smtp/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            email: {
-              html: htmlContent,
-              text: htmlContent.replace(/<[^>]*>/g, ''),
-              subject: subject,
-              from: {
-                name: "Istilal",
-                email: fromEmail
-              },
-              // Send to ONE recipient only - this protects privacy
-              to: [{ email: recipientEmail }]
-            }
-          })
-        });
-
-        if (response.ok) {
-          return { success: true };
-        } else {
-          const error = await response.text();
-          console.error(`SendPlus send error for ${recipientEmail}:`, error);
-          return { success: false };
-        }
-      } catch (error) {
-        console.error(`Error sending to ${recipientEmail}:`, error);
-        return { success: false };
-      }
+  try {
+    await client.send({
+      from: `Istilal <${config.fromEmail}>`,
+      to: to,
+      subject: subject,
+      content: "auto",
+      html: html,
     });
-
-    const results = await Promise.all(promises);
-    successCount += results.filter(r => r.success).length;
-    failedCount += results.filter(r => !r.success).length;
-    
-    // Small delay between batches to avoid rate limiting
-    if (i + batchSize < toEmails.length) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
+    console.log('Email sent successfully to:', to);
+    return true;
+  } catch (error) {
+    console.error('Failed to send email to:', to, error);
+    return false;
+  } finally {
+    await client.close();
   }
-
-  return { success: successCount, failed: failedCount };
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -140,6 +94,12 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const config = await getSmtpConfig(supabase);
+    
+    if (!config.user || !config.password) {
+      throw new Error('SMTP credentials not configured');
+    }
 
     let emails: string[] = [];
 
@@ -205,10 +165,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Sending emails to ${emails.length} recipients via SendPlus`);
+    console.log(`Sending emails to ${emails.length} recipients via SMTP`);
 
     const siteUrl = "https://istilal.com";
-    const fromEmail = Deno.env.get("SENDPLUS_FROM_EMAIL") || "noreply@istilal.com";
 
     // Get icon based on email type
     const typeIcons: Record<string, string> = {
@@ -263,20 +222,31 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    // Get SendPlus token and send emails
-    const token = await getSendPlusToken();
-    const result = await sendEmail(token, fromEmail, emails, subject, htmlContent);
+    let successCount = 0;
+    let failedCount = 0;
 
-    console.log(`Email sending complete: ${result.success} success, ${result.failed} errors`);
+    // Send emails one by one for privacy
+    for (const email of emails) {
+      const success = await sendSingleEmail(config, email, subject, htmlContent);
+      if (success) {
+        successCount++;
+      } else {
+        failedCount++;
+      }
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    console.log(`Email sending complete: ${successCount} success, ${failedCount} failed`);
 
     // Update email log if logId provided
     if (logId) {
       await supabase
         .from("email_logs")
         .update({
-          status: result.failed > 0 ? 'partial' : 'sent',
-          success_count: result.success,
-          failed_count: result.failed,
+          status: failedCount > 0 ? 'partial' : 'sent',
+          success_count: successCount,
+          failed_count: failedCount,
           sent_at: new Date().toISOString()
         })
         .eq("id", logId);
@@ -285,8 +255,8 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        sent: result.success,
-        failed: result.failed,
+        sent: successCount,
+        failed: failedCount,
         total: emails.length 
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
