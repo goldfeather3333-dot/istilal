@@ -178,7 +178,7 @@ export default function ResetPassword() {
             <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
               <FileCheck className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-2xl">PlagaiScans</span>
+            <span className="font-display font-bold text-2xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Istilal</span>
           </div>
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -199,7 +199,7 @@ export default function ResetPassword() {
               <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
                 <FileCheck className="h-6 w-6 text-primary-foreground" />
               </div>
-              <span className="font-display font-bold text-2xl">PlagaiScans</span>
+              <span className="font-display font-bold text-2xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Istilal</span>
             </div>
           </div>
 
@@ -232,7 +232,7 @@ export default function ResetPassword() {
               <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
                 <FileCheck className="h-6 w-6 text-primary-foreground" />
               </div>
-              <span className="font-display font-bold text-2xl">PlagaiScans</span>
+              <span className="font-display font-bold text-2xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Istilal</span>
             </div>
           </div>
 
@@ -266,7 +266,7 @@ export default function ResetPassword() {
             <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
               <FileCheck className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-2xl">PlagaiScans</span>
+            <span className="font-display font-bold text-2xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Istilal</span>
           </div>
           <p className="text-muted-foreground">Set your new password</p>
         </div>
