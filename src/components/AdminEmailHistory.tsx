@@ -1,9 +1,11 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/hooks/use-toast';
 import { 
   Mail, 
   CheckCircle2, 
@@ -11,7 +13,9 @@ import {
   Clock, 
   Users,
   Calendar,
-  History
+  History,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -38,6 +42,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   pending: { label: 'Pending', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20', icon: Clock },
   failed: { label: 'Failed', color: 'bg-red-500/10 text-red-500 border-red-500/20', icon: XCircle },
   partial: { label: 'Partial', color: 'bg-orange-500/10 text-orange-500 border-orange-500/20', icon: Clock },
+  sending: { label: 'Sending', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20', icon: Loader2 },
 };
 
 const audienceLabels: Record<string, string> = {
@@ -48,6 +53,9 @@ const audienceLabels: Record<string, string> = {
 };
 
 export const AdminEmailHistory: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [resendingId, setResendingId] = useState<string | null>(null);
+
   const { data: emailLogs, isLoading } = useQuery({
     queryKey: ['email-logs'],
     queryFn: async () => {
@@ -59,6 +67,53 @@ export const AdminEmailHistory: React.FC = () => {
       
       if (error) throw error;
       return data as EmailLog[];
+    }
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async (log: EmailLog) => {
+      setResendingId(log.id);
+      
+      // Update the log status to sending
+      await supabase
+        .from('email_logs')
+        .update({ status: 'sending', success_count: 0, failed_count: 0 })
+        .eq('id', log.id);
+
+      // Resend the email
+      const { data, error } = await supabase.functions.invoke('admin-send-email', {
+        body: {
+          type: log.type,
+          targetAudience: log.target_audience,
+          subject: log.subject,
+          title: log.title,
+          message: log.message,
+          ctaText: log.cta_text || undefined,
+          ctaUrl: log.cta_url || undefined,
+          logId: log.id
+        }
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: 'Emails Resent Successfully!', 
+        description: `Sent to ${data.sent} recipients${data.failed > 0 ? `, ${data.failed} failed` : ''}.` 
+      });
+      queryClient.invalidateQueries({ queryKey: ['email-logs'] });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Failed to resend emails', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+      queryClient.invalidateQueries({ queryKey: ['email-logs'] });
+    },
+    onSettled: () => {
+      setResendingId(null);
     }
   });
 
@@ -209,7 +264,7 @@ export const AdminEmailHistory: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        <div className="text-right shrink-0">
+                        <div className="text-right shrink-0 flex flex-col items-end gap-2">
                           <div className="flex items-center gap-2 text-sm">
                             <span className="text-green-500">{log.success_count} ✓</span>
                             {log.failed_count > 0 && (
@@ -217,11 +272,27 @@ export const AdminEmailHistory: React.FC = () => {
                             )}
                           </div>
                           {log.recipient_count > 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-xs text-muted-foreground">
                               {successRate}% success
                             </p>
                           )}
-                          <p className="text-xs text-muted-foreground mt-1">
+                          {(log.status === 'failed' || log.status === 'partial' || log.failed_count > 0) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-xs h-7"
+                              onClick={() => resendMutation.mutate(log)}
+                              disabled={resendingId === log.id}
+                            >
+                              {resendingId === log.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-3 w-3" />
+                              )}
+                              Resend
+                            </Button>
+                          )}
+                          <p className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
                           </p>
                         </div>
