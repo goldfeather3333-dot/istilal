@@ -48,7 +48,7 @@ async function getSiteUrl(supabase: any): Promise<string> {
     .eq('key', 'site_url')
     .single();
   
-  return data?.value || 'https://istilal.lovable.app';
+  return data?.value || 'https://istilal.com';
 }
 
 const handler = async (req: Request): Promise<Response> => {
