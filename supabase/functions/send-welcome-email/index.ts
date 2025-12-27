@@ -83,42 +83,8 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <div style="background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #2d5a27; margin: 0; font-size: 28px;">Welcome to Istilal! 🎉</h1>
-            </div>
-            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-              Hello ${name || 'there'},
-            </p>
-            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-              Thank you for joining Istilal! We're excited to have you on board.
-            </p>
-            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-              Our platform provides professional document similarity detection services. Upload your documents and get detailed reports quickly and securely.
-            </p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://istilal.com/dashboard" style="display: inline-block; background-color: #2d5a27; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">Get Started</a>
-            </div>
-            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-              If you have any questions, feel free to reach out to our support team.
-            </p>
-          </div>
-          <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 20px;">
-            © 2024 Istilal. All rights reserved.
-          </p>
-        </div>
-      </body>
-      </html>
-    `;
+    // Build HTML without extra whitespace to avoid =20 encoding issues
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head><body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f8f9fa;"><div style="max-width:600px;margin:0 auto;padding:40px 20px;"><div style="background-color:#ffffff;border-radius:12px;padding:40px;box-shadow:0 4px 6px rgba(0,0,0,0.1);"><div style="text-align:center;margin-bottom:30px;"><h1 style="color:#2d5a27;margin:0;font-size:28px;">Welcome to Istilal! 🎉</h1></div><p style="color:#374151;font-size:16px;line-height:1.6;margin-bottom:20px;">Hello ${name || 'there'},</p><p style="color:#374151;font-size:16px;line-height:1.6;margin-bottom:20px;">Thank you for joining Istilal! We're excited to have you on board.</p><p style="color:#374151;font-size:16px;line-height:1.6;margin-bottom:30px;">Our platform provides professional document similarity detection services. Upload your documents and get detailed reports quickly and securely.</p><div style="text-align:center;margin:30px 0;"><a href="https://istilal.com/dashboard" style="display:inline-block;background-color:#2d5a27;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px;">Get Started</a></div><p style="color:#6b7280;font-size:14px;line-height:1.6;margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb;">If you have any questions, feel free to reach out to our support team.</p></div><p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:20px;">© 2024 Istilal. All rights reserved.</p></div></body></html>`;
 
     try {
       await client.send({

@@ -86,45 +86,8 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <div style="background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #2d5a27; margin: 0; font-size: 28px;">Payment Confirmed! 💳</h1>
-            </div>
-            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-              Hello ${customerName || 'there'},
-            </p>
-            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-              Your payment has been verified and credits have been added to your account.
-            </p>
-            <div style="background-color: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 20px; margin: 20px 0;">
-              <h3 style="color: #166534; margin: 0 0 15px 0; font-size: 16px;">Payment Details</h3>
-              <p style="color: #374151; margin: 5px 0;"><strong>Credits Added:</strong> ${credits}</p>
-              <p style="color: #374151; margin: 5px 0;"><strong>Amount:</strong> $${amount.toFixed(2)}</p>
-              <p style="color: #374151; margin: 5px 0;"><strong>Payment Method:</strong> ${paymentMethod}</p>
-            </div>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://istilal.com/dashboard" style="display: inline-block; background-color: #2d5a27; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">Go to Dashboard</a>
-            </div>
-            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-              Thank you for your purchase!
-            </p>
-          </div>
-          <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 20px;">
-            © 2024 Istilal. All rights reserved.
-          </p>
-        </div>
-      </body>
-      </html>
-    `;
+    // Build HTML without extra whitespace to avoid =20 encoding issues
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head><body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f8f9fa;"><div style="max-width:600px;margin:0 auto;padding:40px 20px;"><div style="background-color:#ffffff;border-radius:12px;padding:40px;box-shadow:0 4px 6px rgba(0,0,0,0.1);"><div style="text-align:center;margin-bottom:30px;"><h1 style="color:#2d5a27;margin:0;font-size:28px;">Payment Confirmed! 💳</h1></div><p style="color:#374151;font-size:16px;line-height:1.6;margin-bottom:20px;">Hello ${customerName || 'there'},</p><p style="color:#374151;font-size:16px;line-height:1.6;margin-bottom:20px;">Your payment has been verified and credits have been added to your account.</p><div style="background-color:#f0fdf4;border:1px solid #22c55e;border-radius:8px;padding:20px;margin:20px 0;"><h3 style="color:#166534;margin:0 0 15px 0;font-size:16px;">Payment Details</h3><p style="color:#374151;margin:5px 0;"><strong>Credits Added:</strong> ${credits}</p><p style="color:#374151;margin:5px 0;"><strong>Amount:</strong> $${amount.toFixed(2)}</p><p style="color:#374151;margin:5px 0;"><strong>Payment Method:</strong> ${paymentMethod}</p></div><div style="text-align:center;margin:30px 0;"><a href="https://istilal.com/dashboard" style="display:inline-block;background-color:#2d5a27;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px;">Go to Dashboard</a></div><p style="color:#6b7280;font-size:14px;line-height:1.6;margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb;">Thank you for your purchase!</p></div><p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:20px;">© 2024 Istilal. All rights reserved.</p></div></body></html>`;
 
     try {
       await client.send({
