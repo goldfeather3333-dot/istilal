@@ -1,4 +1,4 @@
-# PlagaiScans
+# Istilal
 
 A comprehensive document plagiarism and AI detection platform using advanced similarity analysis.
 
@@ -56,8 +56,8 @@ npm run dev
 
 - **Frontend**: React + TypeScript + Vite
 - **Styling**: Tailwind CSS + shadcn/ui
-- **Backend**: Lovable Cloud (Supabase)
-- **Email**: SendPulse SMTP
+- **Backend**: Supabase
+- **Email**: SMTP
 - **Payments**: Crypto (NOWPayments), Manual verification
 
 ## 📁 Project Structure
@@ -74,8 +74,8 @@ src/
 
 ## 📞 Support
 
-For support, contact: support@plagaiscans.com
+For support, contact: support@istilal.com
 
 ---
 
-**Operated by Goldfeather Prem Ltd (UK) | Built with Lovable**
+**Operated by Goldfeather Prem Ltd (UK) | https://istilal.com**
