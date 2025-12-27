@@ -92,8 +92,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Generate password reset link using Supabase Admin API
-    const siteUrl = await getSiteUrl(supabase);
-    const redirectTo = `${siteUrl}/auth?reset=true`;
+    // The redirect_to will be where users land AFTER Supabase verifies the token
+    const siteUrl = 'https://istilal.com';
+    const redirectTo = `${siteUrl}/reset-password`;
     
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
@@ -108,9 +109,18 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Failed to generate reset link');
     }
 
-    // The generated link contains the token - we need to construct the proper URL
-    const resetLink = linkData.properties?.action_link || `${siteUrl}/auth?reset=true`;
-    console.log('Generated reset link for:', email);
+    // The action_link from Supabase contains the verification URL
+    // Format: https://PROJECT.supabase.co/auth/v1/verify?token=...&type=recovery&redirect_to=...
+    // We need to use this URL as-is because Supabase needs to verify the token
+    // After verification, it will redirect to our redirect_to URL with the session
+    const resetLink = linkData.properties?.action_link;
+    
+    if (!resetLink) {
+      console.error('No action link generated');
+      throw new Error('Failed to generate reset link');
+    }
+    
+    console.log('Generated reset link for:', email, '- redirects to:', redirectTo);
 
     const config = await getSmtpConfig(supabase);
     
