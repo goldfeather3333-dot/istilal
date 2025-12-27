@@ -9,7 +9,6 @@ const corsHeaders = {
 
 interface PasswordResetRequest {
   email: string;
-  resetLink: string;
 }
 
 async function getSmtpConfig(supabase: any) {
@@ -42,6 +41,16 @@ async function isEmailEnabled(supabase: any, settingKey: string): Promise<boolea
   return data?.is_enabled !== false;
 }
 
+async function getSiteUrl(supabase: any): Promise<string> {
+  const { data } = await supabase
+    .from('settings')
+    .select('value')
+    .eq('key', 'site_url')
+    .single();
+  
+  return data?.value || 'https://istilal.lovable.app';
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -62,8 +71,46 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { email, resetLink }: PasswordResetRequest = await req.json();
-    console.log('Sending password reset email to:', email);
+    const { email }: PasswordResetRequest = await req.json();
+    console.log('Processing password reset request for:', email);
+
+    // Check if user exists
+    const { data: users, error: userError } = await supabase.auth.admin.listUsers();
+    if (userError) {
+      console.error('Error listing users:', userError);
+      throw new Error('Failed to verify user');
+    }
+
+    const userExists = users.users.some((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+    if (!userExists) {
+      console.log('User not found, returning success anyway for security');
+      // Return success even if user doesn't exist (security best practice)
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Generate password reset link using Supabase Admin API
+    const siteUrl = await getSiteUrl(supabase);
+    const redirectTo = `${siteUrl}/auth?reset=true`;
+    
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirectTo: redirectTo,
+      },
+    });
+
+    if (linkError) {
+      console.error('Error generating reset link:', linkError);
+      throw new Error('Failed to generate reset link');
+    }
+
+    // The generated link contains the token - we need to construct the proper URL
+    const resetLink = linkData.properties?.action_link || `${siteUrl}/auth?reset=true`;
+    console.log('Generated reset link for:', email);
 
     const config = await getSmtpConfig(supabase);
     
@@ -94,7 +141,7 @@ const handler = async (req: Request): Promise<Response> => {
         content: "auto",
         html,
       });
-      console.log('Password reset email sent successfully');
+      console.log('Password reset email sent successfully to:', email);
     } finally {
       await client.close();
     }
