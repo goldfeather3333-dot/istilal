@@ -1,14 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const SENDPULSE_API_KEY = Deno.env.get("SENDPLUS_API_KEY");
-const SENDPULSE_API_SECRET = Deno.env.get("SENDPLUS_API_SECRET");
-const SENDPULSE_FROM_EMAIL = Deno.env.get("SENDPLUS_FROM_EMAIL") || "noreply@plagaiscans.com";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface EmailRequest {
@@ -19,145 +15,106 @@ interface EmailRequest {
   aiPercentage?: number;
 }
 
-// Get SendPulse access token
-async function getSendPulseToken(): Promise<string> {
-  const response = await fetch("https://api.sendpulse.com/oauth/access_token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      grant_type: "client_credentials",
-      client_id: SENDPULSE_API_KEY,
-      client_secret: SENDPULSE_API_SECRET,
-    }),
+async function getSmtpConfig(supabase: any) {
+  const { data: settings } = await supabase
+    .from('settings')
+    .select('key, value')
+    .in('key', ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from_email']);
+
+  const config: Record<string, string> = {};
+  settings?.forEach((s: any) => {
+    config[s.key] = s.value;
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("SendPulse auth error:", errorText);
-    throw new Error("Failed to authenticate with SendPulse");
-  }
-
-  const data = await response.json();
-  return data.access_token;
+  return {
+    host: config.smtp_host || Deno.env.get('SMTP_HOST') || 'mail.privateemail.com',
+    port: parseInt(config.smtp_port || Deno.env.get('SMTP_PORT') || '465'),
+    user: config.smtp_user || Deno.env.get('SMTP_USER') || '',
+    password: config.smtp_password || Deno.env.get('SMTP_PASSWORD') || '',
+    fromEmail: config.smtp_from_email || 'noreply@istilal.com',
+  };
 }
 
-// Send email via SendPulse SMTP API
-async function sendEmailViaSendPulse(
-  token: string,
-  to: { email: string; name?: string },
-  subject: string,
-  htmlContent: string
-): Promise<void> {
-  // Encode HTML content to Base64
-  const htmlBase64 = btoa(unescape(encodeURIComponent(htmlContent)));
-
-  const response = await fetch("https://api.sendpulse.com/smtp/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      email: {
-        html: htmlBase64,
-        subject: subject,
-        from: {
-          name: "PlagaiScans",
-          email: SENDPULSE_FROM_EMAIL,
-        },
-        to: [
-          {
-            email: to.email,
-            name: to.name || to.email,
-          },
-        ],
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("SendPulse send error:", errorText);
-    throw new Error(`Failed to send email: ${errorText}`);
-  }
-
-  const result = await response.json();
-  console.log("SendPulse response:", result);
-}
-
-// Check if email setting is enabled
 async function isEmailEnabled(supabase: any, settingKey: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('email_settings')
+    .select('is_enabled')
+    .eq('setting_key', settingKey)
+    .maybeSingle();
+  return data?.is_enabled ?? true;
+}
+
+async function sendEmail(config: any, to: string, subject: string, html: string): Promise<void> {
+  console.log('Connecting to SMTP server:', config.host, 'port:', config.port);
+  
+  const client = new SMTPClient({
+    connection: {
+      hostname: config.host,
+      port: config.port,
+      tls: true,
+      auth: {
+        username: config.user,
+        password: config.password,
+      },
+    },
+  });
+
   try {
-    const { data, error } = await supabase
-      .from("email_settings")
-      .select("is_enabled")
-      .eq("setting_key", settingKey)
-      .maybeSingle();
-    
-    if (error || !data) {
-      console.log(`Email setting ${settingKey} not found, defaulting to enabled`);
-      return true;
-    }
-    
-    return data.is_enabled;
-  } catch (error) {
-    console.error("Error checking email setting:", error);
-    return true;
+    await client.send({
+      from: `Istilal <${config.fromEmail}>`,
+      to: to,
+      subject: subject,
+      content: "auto",
+      html: html,
+    });
+    console.log('Email sent successfully to:', to);
+  } finally {
+    await client.close();
   }
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { documentId, userId, fileName, similarityPercentage = 0, aiPercentage = 0 }: EmailRequest = await req.json();
+    console.log('Processing completion email for document:', fileName);
 
-    console.log("Sending completion email for document:", documentId, "userId:", userId, "fileName:", fileName);
-
-    // Check if SendPulse credentials are configured
-    if (!SENDPULSE_API_KEY || !SENDPULSE_API_SECRET) {
-      console.error("SendPulse credentials not configured");
-      throw new Error("Email service is not configured");
-    }
-
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if document completion emails are enabled
-    const isEnabled = await isEmailEnabled(supabase, "document_completion");
-    if (!isEnabled) {
-      console.log("Document completion emails are disabled by admin, skipping");
+    const enabled = await isEmailEnabled(supabase, 'document_completion');
+    if (!enabled) {
+      console.log('Document completion emails are disabled');
       return new Response(
-        JSON.stringify({ success: true, skipped: true, reason: "Email disabled by admin" }),
+        JSON.stringify({ success: true, skipped: true, message: 'Document completion emails are disabled' }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Get user email from profiles
+    // Get user profile
     const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", userId)
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', userId)
       .single();
 
-    if (profileError || !profile) {
-      console.error("Error fetching profile:", profileError);
-      throw new Error("User profile not found");
+    if (profileError || !profile?.email) {
+      throw new Error('User email not found');
     }
 
-    const userName = profile.full_name || "Customer";
-    const siteUrl = Deno.env.get("SITE_URL") || "https://plagaiscans.com";
+    const config = await getSmtpConfig(supabase);
+    
+    if (!config.user || !config.password) {
+      throw new Error('SMTP credentials not configured');
+    }
 
-    // Get SendPulse token
-    const token = await getSendPulseToken();
-
+    const userName = profile.full_name || profile.email.split('@')[0];
+    const siteUrl = "https://istilal.com";
+    
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -205,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             
             <p style="color: #a1a1aa; text-align: center; margin: 30px 0 0 0; font-size: 12px;">
-              This is an automated email from PlagaiScans. Please do not reply.
+              This is an automated email from Istilal. Please do not reply.
             </p>
           </div>
         </div>
@@ -213,30 +170,17 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    await sendEmailViaSendPulse(
-      token,
-      { email: profile.email, name: userName },
-      "Your Document Has Been Processed! - PlagaiScans",
-      htmlContent
+    await sendEmail(config, profile.email, 'Your Document Has Been Processed! - Istilal', htmlContent);
+
+    return new Response(
+      JSON.stringify({ success: true, message: 'Completion email sent' }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-
-    console.log("Completion email sent successfully");
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
-      },
-    });
   } catch (error: any) {
-    console.error("Error in send-completion-email function:", error);
+    console.error("Error sending completion email:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };
