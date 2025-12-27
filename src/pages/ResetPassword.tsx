@@ -47,14 +47,40 @@ export default function ResetPassword() {
       setValidatingToken(true);
 
       try {
+        // Check for token_hash in query params (new direct link format)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenHash = urlParams.get('token_hash');
+        const type = urlParams.get('type');
+        const email = urlParams.get('email');
+
+        // Also check hash params for legacy/redirect format
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
-        const type = hashParams.get('type');
+        const hashType = hashParams.get('type');
 
-        // If this is a recovery link and we have tokens, establish a session from the URL.
-        // This prevents route-guards (and other pages) from hijacking the flow.
-        if (type === 'recovery' && accessToken && refreshToken) {
+        // Handle new direct link format with token_hash
+        if (type === 'recovery' && tokenHash && email) {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'recovery',
+          });
+
+          if (verifyError) {
+            console.error('Token verification error:', verifyError);
+            setTokenError('Invalid or expired reset link. Please request a new one.');
+            setTokenValid(false);
+            return;
+          }
+
+          // Clear URL params for security
+          window.history.replaceState(null, '', window.location.pathname);
+          setTokenValid(true);
+          return;
+        }
+
+        // Handle legacy hash format (from Supabase redirect)
+        if (hashType === 'recovery' && accessToken && refreshToken) {
           const { error: setSessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -65,37 +91,25 @@ export default function ResetPassword() {
             setTokenValid(false);
             return;
           }
-        }
-
-        // Check if we now have a valid session from the recovery link
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) {
-          setTokenError('Invalid or expired reset link. Please request a new one.');
-          setTokenValid(false);
-          return;
-        }
-
-        if (!session) {
-          // No session means the token was invalid or expired
-          setTokenError('Invalid or expired reset link. Please request a new one.');
-          setTokenValid(false);
-          return;
-        }
-
-        // If we have a recovery type or a valid session, allow password reset
-        if (type === 'recovery' || session) {
-          setTokenValid(true);
 
           // Clear the hash from URL for security
-          if (window.location.hash) {
-            window.history.replaceState(null, '', window.location.pathname);
-          }
-        } else {
-          setTokenError('Invalid reset link. Please request a new password reset.');
-          setTokenValid(false);
+          window.history.replaceState(null, '', window.location.pathname);
+          setTokenValid(true);
+          return;
         }
-      } catch {
+
+        // Check if we have an existing valid session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError || !session) {
+          setTokenError('Invalid or expired reset link. Please request a new one.');
+          setTokenValid(false);
+          return;
+        }
+
+        setTokenValid(true);
+      } catch (err) {
+        console.error('Recovery validation error:', err);
         setTokenError('An error occurred. Please request a new reset link.');
         setTokenValid(false);
       } finally {

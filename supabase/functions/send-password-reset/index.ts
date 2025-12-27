@@ -92,16 +92,11 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Generate password reset link using Supabase Admin API
-    // The redirect_to will be where users land AFTER Supabase verifies the token
     const siteUrl = 'https://istilal.com';
-    const redirectTo = `${siteUrl}/reset-password`;
     
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email,
-      options: {
-        redirectTo: redirectTo,
-      },
     });
 
     if (linkError) {
@@ -109,18 +104,20 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Failed to generate reset link');
     }
 
-    // The action_link from Supabase contains the verification URL
-    // Format: https://PROJECT.supabase.co/auth/v1/verify?token=...&type=recovery&redirect_to=...
-    // We need to use this URL as-is because Supabase needs to verify the token
-    // After verification, it will redirect to our redirect_to URL with the session
-    const resetLink = linkData.properties?.action_link;
+    // Extract token_hash from the generated link data
+    // We'll use this to verify on the client side using verifyOtp
+    const tokenHash = linkData.properties?.hashed_token;
     
-    if (!resetLink) {
-      console.error('No action link generated');
+    if (!tokenHash) {
+      console.error('No token hash generated');
       throw new Error('Failed to generate reset link');
     }
     
-    console.log('Generated reset link for:', email, '- redirects to:', redirectTo);
+    // Build reset link that goes directly to our custom domain
+    // The ResetPassword page will use verifyOtp with the token_hash
+    const resetLink = `${siteUrl}/reset-password?token_hash=${encodeURIComponent(tokenHash)}&type=recovery&email=${encodeURIComponent(email)}`;
+    
+    console.log('Generated reset link for:', email, 'with direct istilal.com URL');
 
     const config = await getSmtpConfig(supabase);
     
