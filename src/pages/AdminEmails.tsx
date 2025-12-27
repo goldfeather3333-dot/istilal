@@ -3,8 +3,9 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { AdminEmailPanel } from '@/components/AdminEmailPanel';
 import { AdminEmailSettings } from '@/components/AdminEmailSettings';
 import { AdminSmtpSettings } from '@/components/AdminSmtpSettings';
+import { AdminEmailHistory } from '@/components/AdminEmailHistory';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, Settings2, Server } from 'lucide-react';
+import { Mail, Settings2, Server, History } from 'lucide-react';
 
 export default function AdminEmails() {
   return (
@@ -18,10 +19,14 @@ export default function AdminEmails() {
         </div>
 
         <Tabs defaultValue="send" className="w-full">
-          <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="send" className="gap-2">
               <Mail className="h-4 w-4" />
               Send Emails
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2">
+              <History className="h-4 w-4" />
+              History
             </TabsTrigger>
             <TabsTrigger value="smtp" className="gap-2">
               <Server className="h-4 w-4" />
@@ -29,12 +34,16 @@ export default function AdminEmails() {
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings2 className="h-4 w-4" />
-              Email Triggers
+              Triggers
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="send" className="mt-6">
             <AdminEmailPanel />
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-6">
+            <AdminEmailHistory />
           </TabsContent>
 
           <TabsContent value="smtp" className="mt-6">
