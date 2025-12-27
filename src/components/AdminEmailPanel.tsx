@@ -349,42 +349,73 @@ export const AdminEmailPanel: React.FC = () => {
     }
   };
 
-  // Email preview component
-  const EmailPreview = () => (
-    <div className="bg-muted/50 rounded-lg p-4 max-w-xl mx-auto">
-      <div className="bg-background rounded-lg shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4 text-center">
-          <div className="bg-white/20 backdrop-blur w-14 h-14 rounded-xl mx-auto flex items-center justify-center">
-            <span className="text-2xl">
-              {emailType === 'announcement' ? '📢' : 
-               emailType === 'payment_reminder' ? '💳' : 
-               emailType === 'document_status' ? '📄' : 
-               emailType === 'promotional' ? '🎉' : 
-               emailType === 'welcome' ? '👋' : '📧'}
-            </span>
-          </div>
-        </div>
-        <div className="p-6">
-          <h2 className="text-xl font-bold text-center mb-4">{title || 'Email Title'}</h2>
-          <div className="text-muted-foreground whitespace-pre-wrap mb-6">
-            {message || 'Your email message will appear here...'}
-          </div>
-          {includeCta && ctaText && (
-            <div className="text-center mb-6">
-              <Button className="bg-gradient-to-r from-blue-500 to-purple-500">
-                {ctaText}
-              </Button>
+  // Email preview component - matches actual email template
+  const EmailPreview = () => {
+    const typeIcons: Record<string, string> = {
+      announcement: '📢',
+      payment_reminder: '💳',
+      document_status: '📄',
+      promotional: '🎉',
+      welcome: '👋',
+      custom: '📧'
+    };
+
+    return (
+      <div style={{ backgroundColor: '#f4f4f5', padding: '20px', borderRadius: '8px' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 20px' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '40px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+            <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+              <div style={{ 
+                background: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)', 
+                width: '60px', 
+                height: '60px', 
+                borderRadius: '12px', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}>
+                <span style={{ color: 'white', fontSize: '28px' }}>{typeIcons[emailType] || '📧'}</span>
+              </div>
             </div>
-          )}
-          <hr className="my-4" />
-          <p className="text-xs text-center text-muted-foreground">
-            This email was sent from Istilal.<br />
-            <a href="#" className="text-emerald-500">Visit our website</a>
-          </p>
+            
+            <h1 style={{ color: '#18181b', textAlign: 'center', margin: '0 0 20px 0', fontSize: '24px' }}>
+              {title || 'Email Title'}
+            </h1>
+            
+            <div style={{ color: '#3f3f46', fontSize: '16px', lineHeight: '1.6', marginBottom: '30px', whiteSpace: 'pre-wrap' }}>
+              {message || 'Your email message will appear here...'}
+            </div>
+            
+            {includeCta && ctaText && (
+              <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                <a 
+                  href={ctaUrl || '#'} 
+                  style={{ 
+                    display: 'inline-block', 
+                    background: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)', 
+                    color: 'white', 
+                    textDecoration: 'none', 
+                    padding: '14px 28px', 
+                    borderRadius: '8px', 
+                    fontWeight: 600 
+                  }}
+                >
+                  {ctaText}
+                </a>
+              </div>
+            )}
+            
+            <hr style={{ border: 'none', borderTop: '1px solid #e4e4e7', margin: '30px 0' }} />
+            
+            <p style={{ color: '#a1a1aa', textAlign: 'center', margin: 0, fontSize: '12px' }}>
+              This email was sent from Istilal.<br />
+              <a href="https://istilal.com" style={{ color: '#10b981', textDecoration: 'none' }}>Visit our website</a>
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
