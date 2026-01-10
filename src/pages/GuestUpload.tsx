@@ -720,7 +720,7 @@ export default function GuestUpload() {
       <footer className="border-t border-border bg-card mt-12">
         <div className="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground space-y-1">
           <p>© {new Date().getFullYear()} Istilal. All rights reserved.</p>
-          <p>Istilal is operated by Goldfeather Prem Ltd (United Kingdom)</p>
+          <p>Check originality. Protect academic integrity.</p>
           <p>Contact: <a href="mailto:support@istilal.com" className="text-primary hover:underline">support@istilal.com</a></p>
         </div>
       </footer>
