@@ -173,7 +173,7 @@ serve(async (req) => {
 
     // Configure web-push
     webpush.setVapidDetails(
-      'mailto:support@plagaiscans.com',
+      'mailto:support@istilal.com',
       vapidPublicKey,
       vapidPrivateKey
     );

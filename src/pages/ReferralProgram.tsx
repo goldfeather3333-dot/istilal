@@ -85,7 +85,7 @@ export default function ReferralProgram() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join PlagaiScans!',
+          title: 'Join Istilal!',
           text: `Use my referral code ${data?.myCode} to get bonus credits!`,
           url: link
         });

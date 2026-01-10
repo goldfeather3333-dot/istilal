@@ -136,7 +136,7 @@ serve(async (req) => {
     const webpush = await import("https://esm.sh/web-push@3.6.7");
 
     webpush.setVapidDetails(
-      "mailto:support@plagaiscans.com",
+      "mailto:support@istilal.com",
       vapidPublicKey,
       vapidPrivateKey
     );
