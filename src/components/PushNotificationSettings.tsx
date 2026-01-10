@@ -49,7 +49,7 @@ export const PushNotificationSettings: React.FC = () => {
 
   const handleTestNotification = () => {
     sendLocalNotification('Test Notification 🔔', {
-      body: 'This is a test notification from PlagaiScans!',
+      body: 'This is a test notification from Istilal!',
     });
   };
 

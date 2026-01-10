@@ -1,8 +1,8 @@
-# PlagaiScans - Complete Platform Documentation
+# Istilal - Complete Platform Documentation
 
 ## Overview
 
-PlagaiScans is a comprehensive document plagiarism and AI detection platform using advanced similarity analysis. The platform enables customers to submit documents for similarity and AI content analysis, with staff members processing documents and administrators managing the entire system.
+Istilal is a comprehensive document plagiarism and AI detection platform using advanced similarity analysis. The platform enables customers to submit documents for similarity and AI content analysis, with staff members processing documents and administrators managing the entire system.
 
 ---
 

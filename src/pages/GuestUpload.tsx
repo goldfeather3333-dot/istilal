@@ -175,7 +175,7 @@ export default function GuestUpload() {
   };
 
   const openWhatsApp = (credits: number) => {
-    const message = encodeURIComponent(`Hello! I'm interested in purchasing ${credits} credits for PlagaiScans.`);
+    const message = encodeURIComponent(`Hello! I'm interested in purchasing ${credits} credits for Istilal.`);
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
@@ -201,7 +201,7 @@ export default function GuestUpload() {
               <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
                 <FileCheck className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-display font-bold text-lg">PlagaiScans</span>
+              <span className="font-display font-bold text-lg">Istilal</span>
             </Link>
             <Button asChild>
               <Link to="/auth">Sign In</Link>
@@ -238,7 +238,7 @@ export default function GuestUpload() {
             <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
               <FileCheck className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-lg">PlagaiScans</span>
+            <span className="font-display font-bold text-lg">Istilal</span>
           </Link>
           <div className="flex items-center gap-4">
             <Badge variant="outline" className="gap-2">
@@ -719,9 +719,9 @@ export default function GuestUpload() {
       {/* Footer */}
       <footer className="border-t border-border bg-card mt-12">
         <div className="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-muted-foreground space-y-1">
-          <p>© {new Date().getFullYear()} Plagaiscans. All rights reserved.</p>
-          <p>Plagaiscans is operated by Goldfeather Prem Ltd (United Kingdom)</p>
-          <p>Contact: <a href="mailto:support@plagaiscans.com" className="text-primary hover:underline">support@plagaiscans.com</a></p>
+          <p>© {new Date().getFullYear()} Istilal. All rights reserved.</p>
+          <p>Istilal is operated by Goldfeather Prem Ltd (United Kingdom)</p>
+          <p>Contact: <a href="mailto:support@istilal.com" className="text-primary hover:underline">support@istilal.com</a></p>
         </div>
       </footer>
     </div>
