@@ -504,4 +504,4 @@ VITE_SUPABASE_PROJECT_ID=<project_id>
 
 **Platform**: PlagaiScans v1.0  
 **Last Updated**: December 2024  
-**Operated by**: Goldfeather Prem Ltd (UK) | Lovable Cloud
+**Platform**: Istilal | https://istilal.com

@@ -78,4 +78,4 @@ For support, contact: support@istilal.com
 
 ---
 
-**Operated by Goldfeather Prem Ltd (UK) | https://istilal.com**
+**Website**: https://istilal.com
