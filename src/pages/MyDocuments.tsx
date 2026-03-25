@@ -390,11 +390,11 @@ export default function MyDocuments() {
                             )}
                           </TableCell>
                           <TableCell className="text-center">
-     {doc.ai_percentage === '*' || doc.ai_percentage === 0 ? (
+ {doc.ai_percentage === '*' ? (
   <span className="font-medium text-blue-600">*</span>
 ) : (
   <span className="font-medium text-blue-600">
-    {doc.ai_percentage}%
+    {(doc.ai_percentage ?? 0)}%
   </span>
 )}
                           </TableCell>
