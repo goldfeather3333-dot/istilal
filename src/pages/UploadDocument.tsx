@@ -208,7 +208,7 @@ export default function UploadDocument() {
             
             <div className="flex items-center justify-between">
               <Label htmlFor="exclude-small" className="font-normal cursor-pointer">
-                Exclude small sources (Small match exclusion type)
+                Exclude sources that are less than 1%
               </Label>
               <Switch
                 id="exclude-small"
