@@ -73,19 +73,20 @@ export const useNotificationSound = () => {
     };
   }, []);
 
-  const playSound = useCallback((overrideSoundType?: NotificationSoundType) => {
-    if (!settings.enabled || !audioRef.current) return;
+ const playSound = useCallback((overrideSoundType?: NotificationSoundType) => {
+  if (!settings.enabled) return;
 
-    const soundType = overrideSoundType || settings.soundType;
-    const sound = NOTIFICATION_SOUNDS[soundType];
+  const soundType = overrideSoundType || settings.soundType;
+  const sound = NOTIFICATION_SOUNDS[soundType];
 
-    audioRef.current.src = sound.base64;
-    audioRef.current.volume = settings.volume;
-    audioRef.current.currentTime = 0;
-    audioRef.current.play().catch((err) => {
-      console.log('Could not play notification sound:', err);
-    });
-  }, [settings.enabled, settings.soundType, settings.volume]);
+  const audio = new Audio(sound.base64);
+  audio.volume = settings.volume;
+  audio.preload = 'auto';
+
+  audio.play().catch((err) => {
+    console.log('Could not play notification sound:', err);
+  });
+}, [settings.enabled, settings.soundType, settings.volume]);
 
   const toggleSound = useCallback(() => {
     setSettings(prev => ({ ...prev, enabled: !prev.enabled }));
