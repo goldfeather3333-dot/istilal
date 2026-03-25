@@ -16,7 +16,7 @@ export const ExclusionOptionsDisplay: React.FC<ExclusionOptionsDisplayProps> = (
   const options = [
     { key: 'bibliographic', value: excludeBibliographic, label: 'Bibliography', icon: BookOpen },
     { key: 'quoted', value: excludeQuoted, label: 'Quoted', icon: Quote },
-    { key: 'small', value: excludeSmallSources, label: 'Small Sources', icon: Minimize2 },
+    { key: 'small', value: excludeSmallSources, label: '1%', icon: Minimize2 },
   ];
 
   const enabledOptions = options.filter(opt => opt.value);
