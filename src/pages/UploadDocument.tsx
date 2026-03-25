@@ -21,8 +21,8 @@ export default function UploadDocument() {
   const [uploadResults, setUploadResults] = useState<{ success: number; failed: number } | null>(null);
   
   const [excludeBibliographic, setExcludeBibliographic] = useState(true);
-  const [excludeQuoted, setExcludeQuoted] = useState(false);
-  const [excludeSmallSources, setExcludeSmallSources] = useState(false);
+  const [excludeQuoted, setExcludeQuoted] = useState(true);
+  const [excludeSmallSources, setExcludeSmallSources] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const creditBalance = profile?.credit_balance || 0;
