@@ -390,11 +390,13 @@ export default function MyDocuments() {
                             )}
                           </TableCell>
                           <TableCell className="text-center">
-                            {doc.ai_percentage !== null && doc.ai_percentage !== undefined ? (
-                              <span className="font-medium text-blue-600">{doc.ai_percentage}%</span>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
+                           {doc.ai_percentage === '*' ? (
+  <span className="font-medium text-blue-600">*</span>
+) : (
+  <span className="font-medium text-blue-600">
+    {(doc.ai_percentage ?? 0)}%
+  </span>
+)}
                           </TableCell>
                           <TableCell className="text-center">
                             {doc.similarity_report_path ? (
