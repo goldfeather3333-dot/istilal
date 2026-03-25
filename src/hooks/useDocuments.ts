@@ -636,15 +636,15 @@ export const useDocuments = () => {
     }
   };
 
-  const uploadReport = async (
-    documentId: string,
-    document: Document,
-    similarityReport: File | null,
-    aiReport: File | null,
-    similarityPercentage: number,
-    aiPercentage: number,
-    remarks?: string | null
-  ) => {
+ const uploadReport = async (
+  documentId: string,
+  document: Document,
+  similarityReport: File | null,
+  aiReport: File | null,
+  similarityPercentage: number,
+  aiPercentage: number | null,
+  remarks?: string | null
+) => {
     if (!user) return;
 
     // Staff AND Admin MUST upload both reports to complete a document
