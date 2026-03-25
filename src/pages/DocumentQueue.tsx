@@ -360,7 +360,7 @@ export default function DocumentQueue() {
             data.similarityFile,
             data.aiFile,
             isNaN(simPercent) ? 0 : simPercent,
-            isNaN(aiPercent) ? 0 : aiPercent,
+            aiPercent === null || isNaN(aiPercent) ? null : aiPercent,
             data.remarks.trim() || null
           );
         }
