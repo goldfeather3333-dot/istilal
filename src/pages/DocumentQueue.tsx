@@ -854,15 +854,20 @@ export default function DocumentQueue() {
                 </div>
                 <div>
                   <Label>AI Percentage (%)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    placeholder="e.g., 10.2"
-                    value={aiPercentage}
-                    onChange={(e) => setAiPercentage(e.target.value)}
-                  />
+                 <Input
+  type="text"
+  placeholder="e.g., 10.2 or *"
+  value={aiPercentage}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    // يسمح فقط بـ:
+    // رقم من 0-100 أو *
+    if (value === '*' || /^\d*\.?\d*$/.test(value)) {
+      setAiPercentage(value);
+    }
+  }}
+/>
                 </div>
               </div>
               
