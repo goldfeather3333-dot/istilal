@@ -55,23 +55,7 @@ export const useNotificationSound = () => {
     return DEFAULT_SETTINGS;
   });
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Save settings to localStorage when they change
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }, [settings]);
-
-  // Initialize audio element
-  useEffect(() => {
-    audioRef.current = new Audio();
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
 
  const playSound = useCallback((overrideSoundType?: NotificationSoundType) => {
   if (!settings.enabled) return;
