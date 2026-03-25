@@ -100,19 +100,18 @@ export const useNotificationSound = () => {
     setSettings(prev => ({ ...prev, volume: Math.max(0, Math.min(1, volume)) }));
   }, []);
 
-  const testSound = useCallback((soundType?: NotificationSoundType) => {
-    const type = soundType || settings.soundType;
-    const sound = NOTIFICATION_SOUNDS[type];
-    
-    if (audioRef.current) {
-      audioRef.current.src = sound.base64;
-      audioRef.current.volume = settings.volume;
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch((err) => {
-        console.log('Could not play test sound:', err);
-      });
-    }
-  }, [settings.soundType, settings.volume]);
+const testSound = useCallback((overrideSoundType?: NotificationSoundType) => {
+  const soundType = overrideSoundType || settings.soundType;
+  const sound = NOTIFICATION_SOUNDS[soundType];
+
+  const audio = new Audio(sound.base64);
+  audio.volume = settings.volume;
+  audio.preload = 'auto';
+
+  audio.play().catch((err) => {
+    console.log('Could not play test sound:', err);
+  });
+}, [settings.soundType, settings.volume]);
 
   return {
     settings,
