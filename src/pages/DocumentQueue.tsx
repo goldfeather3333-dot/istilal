@@ -460,12 +460,12 @@ export default function DocumentQueue() {
       ? parseFloat(similarityPercentage)
       : 0;
 
-  const aiPercent =
-    aiPercentage.trim() === '*'
-      ? null
-      : aiPercentage.trim() !== ''
-      ? parseFloat(aiPercentage)
-      : 0;
+ const aiPercent =
+  aiPercentage.trim() === '*'
+    ? '*' // نخزن النجمة كنص
+    : aiPercentage.trim() !== ''
+    ? parseFloat(aiPercentage)
+    : 0;
 
   await uploadReport(
     selectedDoc.id,
