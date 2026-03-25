@@ -389,15 +389,17 @@ export default function MyDocuments() {
                               <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-center">
-{doc.ai_percentage === null ? (
-  <span className="font-medium text-blue-600">*</span>
-) : (
-  <span className="font-medium text-blue-600">
-    {doc.ai_percentage}%
-  </span>
-)}
-                          </TableCell>
+                  <TableCell className="text-center">
+  {doc.status !== 'completed' ? (
+    <span className="text-muted-foreground">-</span>
+  ) : doc.ai_percentage === null ? (
+    <span className="font-medium text-blue-600">*</span>
+  ) : (
+    <span className="font-medium text-blue-600">
+      {doc.ai_percentage}%
+    </span>
+  )}
+</TableCell>
                           <TableCell className="text-center">
                             {doc.similarity_report_path ? (
                               <Button
