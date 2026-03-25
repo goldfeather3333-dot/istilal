@@ -449,23 +449,37 @@ export default function DocumentQueue() {
     setRemarks('');
   };
 
-  const handleSubmitReport = async () => {
-    if (!selectedDoc) return;
-    setSubmitting(true);
-    const simPercent = similarityPercentage.trim() !== '' ? parseFloat(similarityPercentage) : 0;
-    const aiPercent = aiPercentage.trim() !== '' ? parseFloat(aiPercentage) : 0;
-    await uploadReport(
-      selectedDoc.id,
-      selectedDoc,
-      similarityFile,
-      aiFile,
-      isNaN(simPercent) ? 0 : simPercent,
-      isNaN(aiPercent) ? 0 : aiPercent,
-      remarks.trim() || null
-    );
-    setSubmitting(false);
-    handleCloseDialog();
-  };
+ const handleSubmitReport = async () => {
+  if (!selectedDoc) return;
+  setSubmitting(true);
+
+  const simPercent =
+    similarityPercentage.trim() === '*'
+      ? null
+      : similarityPercentage.trim() !== ''
+      ? parseFloat(similarityPercentage)
+      : 0;
+
+  const aiPercent =
+    aiPercentage.trim() === '*'
+      ? null
+      : aiPercentage.trim() !== ''
+      ? parseFloat(aiPercentage)
+      : 0;
+
+  await uploadReport(
+    selectedDoc.id,
+    selectedDoc,
+    similarityFile,
+    aiFile,
+    simPercent === null || isNaN(simPercent) ? 0 : simPercent,
+    aiPercent === null || isNaN(aiPercent) ? 0 : aiPercent,
+    remarks.trim() || null
+  );
+
+  setSubmitting(false);
+  handleCloseDialog();
+};
 
   const handleSimilarityFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
