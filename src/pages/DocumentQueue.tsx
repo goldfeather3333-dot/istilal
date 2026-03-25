@@ -449,31 +449,29 @@ export default function DocumentQueue() {
     setRemarks('');
   };
 
- const handleSubmitReport = async () => {
+const handleSubmitReport = async () => {
   if (!selectedDoc) return;
   setSubmitting(true);
 
   const simPercent =
-    similarityPercentage.trim() === '*'
-      ? null
-      : similarityPercentage.trim() !== ''
+    similarityPercentage.trim() !== ''
       ? parseFloat(similarityPercentage)
       : 0;
 
- const aiPercent =
-  aiPercentage.trim() === '*'
-    ? '*' // نخزن النجمة كنص
-    : aiPercentage.trim() !== ''
-    ? parseFloat(aiPercentage)
-    : 0;
+  const aiPercent =
+    aiPercentage.trim() === '*'
+      ? null
+      : aiPercentage.trim() !== ''
+      ? parseFloat(aiPercentage)
+      : 0;
 
   await uploadReport(
     selectedDoc.id,
     selectedDoc,
     similarityFile,
     aiFile,
-    simPercent === null || isNaN(simPercent) ? 0 : simPercent,
-    aiPercent === null || isNaN(aiPercent) ? 0 : aiPercent,
+    isNaN(simPercent) ? 0 : simPercent,
+    aiPercent !== null && isNaN(aiPercent) ? 0 : aiPercent,
     remarks.trim() || null
   );
 
