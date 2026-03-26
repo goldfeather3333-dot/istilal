@@ -51,6 +51,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 
 interface NavLink {
   to: string;
@@ -102,6 +103,8 @@ export const DashboardSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { playSound } = useNotificationSound();
+
   const [isOpen, setIsOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -110,7 +113,6 @@ export const DashboardSidebar: React.FC = () => {
   const [animatingBadges, setAnimatingBadges] = useState<Set<string>>(new Set());
   const [seenCounts, setSeenCounts] = useState<SeenCounts>(getSeenCounts);
 
-  // Notification config for each badge type
   const notificationConfig: Record<keyof BadgeCounts, { title: string; description: string; path: string }> = {
     pendingDocuments: {
       title: 'New Document Pending',
@@ -134,7 +136,6 @@ export const DashboardSidebar: React.FC = () => {
     },
   };
 
-  // Fetch badge counts for admin
   const { data: badgeCounts } = useQuery({
     queryKey: ['admin-badge-counts'],
     queryFn: async (): Promise<BadgeCounts> => {
@@ -144,7 +145,7 @@ export const DashboardSidebar: React.FC = () => {
         supabase.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'open'),
         supabase.from('crypto_payments').select('id', { count: 'exact', head: true }).eq('status', 'waiting'),
       ]);
-      
+
       return {
         pendingDocuments: documentsRes.count || 0,
         pendingManualPayments: manualPaymentsRes.count || 0,
@@ -156,7 +157,6 @@ export const DashboardSidebar: React.FC = () => {
     refetchInterval: 30000,
   });
 
-  // Detect new items, trigger animation and show toast
   useEffect(() => {
     if (!badgeCounts || !previousCounts) {
       if (badgeCounts) setPreviousCounts(badgeCounts);
@@ -165,7 +165,7 @@ export const DashboardSidebar: React.FC = () => {
 
     const newAnimating = new Set<string>();
     const notifications: Array<{ key: keyof BadgeCounts; diff: number }> = [];
-    
+
     if (badgeCounts.pendingDocuments > previousCounts.pendingDocuments) {
       newAnimating.add('pendingDocuments');
       notifications.push({ key: 'pendingDocuments', diff: badgeCounts.pendingDocuments - previousCounts.pendingDocuments });
@@ -188,9 +188,9 @@ export const DashboardSidebar: React.FC = () => {
       setTimeout(() => setAnimatingBadges(new Set()), 3000);
     }
 
-    // Show toast notifications for new items
     notifications.forEach(({ key, diff }) => {
       const config = notificationConfig[key];
+
       toast({
         title: config.title,
         description: (
@@ -207,12 +207,19 @@ export const DashboardSidebar: React.FC = () => {
           </div>
         ),
       });
+
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(config.title, {
+          body: diff > 1 ? `${diff} new items` : config.description,
+        });
+      }
+
+      playSound('bell');
     });
 
     setPreviousCounts(badgeCounts);
-  }, [badgeCounts, navigate]);
+  }, [badgeCounts, previousCounts, navigate, playSound]);
 
-  // Real-time subscriptions for badge updates
   useEffect(() => {
     if (role !== 'admin') return;
 
@@ -248,10 +255,8 @@ export const DashboardSidebar: React.FC = () => {
     };
   }, [role, queryClient]);
 
-  // Keyboard shortcuts (Cmd/Ctrl + K for search, Escape to close)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + K to focus search
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         if (!isOpen) {
@@ -261,8 +266,7 @@ export const DashboardSidebar: React.FC = () => {
           searchInputRef.current?.focus();
         }, 100);
       }
-      
-      // Escape to close sidebar or clear search
+
       if (e.key === 'Escape') {
         if (searchQuery) {
           setSearchQuery('');
@@ -300,7 +304,6 @@ export const DashboardSidebar: React.FC = () => {
     { to: '/dashboard/profile', icon: User, label: t('sidebar.profile') },
   ];
 
-  // Admin grouped navigation
   const adminGroups: NavGroup[] = [
     {
       label: t('navigation.documentsGroup'),
@@ -372,16 +375,13 @@ export const DashboardSidebar: React.FC = () => {
     },
   ];
 
-  // Calculate unseen count (only show badge for new items since last visit)
   const getUnseenCount = useCallback((key: keyof BadgeCounts): number => {
     if (!badgeCounts) return 0;
     const currentCount = badgeCounts[key];
     const seen = seenCounts[key as keyof SeenCounts] || 0;
-    // Show badge only if current count is greater than what was seen
     return currentCount > seen ? currentCount - seen : 0;
   }, [badgeCounts, seenCounts]);
 
-  // Calculate group badge counts (using unseen counts)
   const getGroupBadgeCount = (group: NavGroup): number => {
     if (!badgeCounts) return 0;
     return group.links.reduce((total, link) => {
@@ -392,15 +392,14 @@ export const DashboardSidebar: React.FC = () => {
     }, 0);
   };
 
-  // Filter links based on search
   const filteredAdminGroups = useMemo(() => {
     if (!searchQuery.trim()) return adminGroups;
-    
+
     const query = searchQuery.toLowerCase();
     return adminGroups
       .map(group => ({
         ...group,
-        links: group.links.filter(link => 
+        links: group.links.filter(link =>
           link.label.toLowerCase().includes(query)
         ),
       }))
@@ -408,17 +407,16 @@ export const DashboardSidebar: React.FC = () => {
   }, [searchQuery]);
 
   const toggleGroup = (groupLabel: string) => {
-    setOpenGroups(prev => 
-      prev.includes(groupLabel) 
+    setOpenGroups(prev =>
+      prev.includes(groupLabel)
         ? prev.filter(g => g !== groupLabel)
         : [...prev, groupLabel]
     );
   };
 
-  // Auto-expand group containing current route
   useEffect(() => {
     if (role === 'admin') {
-      const currentGroup = adminGroups.find(group => 
+      const currentGroup = adminGroups.find(group =>
         group.links.some(link => link.to === location.pathname)
       );
       if (currentGroup && !openGroups.includes(currentGroup.label)) {
@@ -427,19 +425,16 @@ export const DashboardSidebar: React.FC = () => {
     }
   }, [location.pathname, role]);
 
-  // Auto-expand all groups when searching
   useEffect(() => {
     if (searchQuery.trim()) {
       setOpenGroups(filteredAdminGroups.map(g => g.label));
     }
   }, [searchQuery, filteredAdminGroups]);
 
-  // Close sidebar when route changes and mark items as seen
   useEffect(() => {
     setIsOpen(false);
     setSearchQuery('');
-    
-    // Mark badges as "seen" when visiting their respective pages
+
     if (badgeCounts) {
       const pathToKey: Record<string, keyof SeenCounts> = {
         '/dashboard/crypto-payments': 'pendingCrypto',
@@ -447,7 +442,7 @@ export const DashboardSidebar: React.FC = () => {
         '/dashboard/support-tickets': 'openTickets',
         '/dashboard/queue': 'pendingDocuments',
       };
-      
+
       const seenKey = pathToKey[location.pathname];
       if (seenKey && badgeCounts[seenKey] > 0) {
         setSeenCount(seenKey, badgeCounts[seenKey]);
@@ -456,13 +451,12 @@ export const DashboardSidebar: React.FC = () => {
     }
   }, [location.pathname, badgeCounts]);
 
-
   const renderBadge = (count: number, badgeKey?: string) => {
     if (count === 0) return null;
     const isAnimating = badgeKey && animatingBadges.has(badgeKey);
     return (
-      <Badge 
-        variant="destructive" 
+      <Badge
+        variant="destructive"
         className={cn(
           "h-5 min-w-5 px-1.5 text-xs font-medium",
           isAnimating && "animate-badge-pulse"
@@ -476,7 +470,7 @@ export const DashboardSidebar: React.FC = () => {
   const renderLink = (link: NavLink, compact = false) => {
     const isActive = location.pathname === link.to;
     const badgeCount = link.badgeKey ? getUnseenCount(link.badgeKey as keyof BadgeCounts) : 0;
-    
+
     return (
       <Link
         key={link.to}
@@ -500,7 +494,6 @@ export const DashboardSidebar: React.FC = () => {
 
   const renderAdminNav = () => (
     <>
-      {/* Search Box */}
       <div className="relative mb-3">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -521,7 +514,6 @@ export const DashboardSidebar: React.FC = () => {
         )}
       </div>
 
-      {/* Dashboard - standalone */}
       {(!searchQuery.trim() || 'dashboard'.includes(searchQuery.toLowerCase())) && (
         <Link
           to="/dashboard"
@@ -537,12 +529,11 @@ export const DashboardSidebar: React.FC = () => {
         </Link>
       )}
 
-      {/* Grouped navigation */}
       {filteredAdminGroups.map((group) => {
         const isGroupOpen = openGroups.includes(group.label);
         const hasActiveLink = group.links.some(link => link.to === location.pathname);
         const groupBadgeCount = getGroupBadgeCount(group);
-        
+
         return (
           <Collapsible
             key={group.label}
@@ -553,8 +544,8 @@ export const DashboardSidebar: React.FC = () => {
               <button
                 className={cn(
                   "w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg transition-colors",
-                  hasActiveLink 
-                    ? "bg-primary/10 text-primary" 
+                  hasActiveLink
+                    ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
@@ -579,7 +570,6 @@ export const DashboardSidebar: React.FC = () => {
         );
       })}
 
-      {/* No results */}
       {searchQuery.trim() && filteredAdminGroups.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-4">No menu items found</p>
       )}
@@ -588,7 +578,6 @@ export const DashboardSidebar: React.FC = () => {
 
   return (
     <>
-      {/* Menu Toggle Button - Always Visible */}
       <Button
         variant="ghost"
         size="icon"
@@ -598,16 +587,14 @@ export const DashboardSidebar: React.FC = () => {
         {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
 
-      {/* Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 animate-in fade-in-0 duration-200"
           onClick={() => setIsOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
-      <aside 
+      <aside
         className={`fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col z-50 transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -639,7 +626,7 @@ export const DashboardSidebar: React.FC = () => {
               <p className="text-2xl font-bold text-primary">{profile.credit_balance}</p>
             </div>
           )}
-          
+
           <div className="px-4">
             <p className="text-sm font-medium truncate">{profile?.full_name || profile?.email}</p>
             <p className="text-xs text-muted-foreground capitalize">{role}</p>
