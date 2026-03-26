@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Upload, FileText, AlertCircle, CheckCircle, Info, ArrowRight, X, Clock3, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
-
+import { UploadCooldownCard } from '@/components/UploadCooldownCard';
 export default function UploadDocument() {
   const { profile } = useAuth();
   const { uploadDocuments, getLastUploadInfo, uploadCooldownMinutes } = useDocuments();
