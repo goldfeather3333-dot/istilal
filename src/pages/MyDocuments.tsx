@@ -41,7 +41,21 @@ export default function MyDocuments() {
   const { documents, loading, downloadFile, deleteDocument, fetchDocuments } = useDocuments();
   const { getLastUploadInfo, uploadCooldownMinutes } = useDocuments();
 const [remainingSeconds, setRemainingSeconds] = useState(0);
-  
+  useEffect(() => {
+  const load = async () => {
+    const info = await getLastUploadInfo();
+    setRemainingSeconds(info.remainingSeconds);
+  };
+  load();
+}, []);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    setRemainingSeconds(prev => (prev > 0 ? prev - 1 : 0));
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, []);
   const { role } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
