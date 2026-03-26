@@ -1,26 +1,22 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 
-// Sound options with different tones
+// Sound options from public/sounds
 export const NOTIFICATION_SOUNDS = {
   chime: {
     name: 'Chime',
-    // Pleasant chime sound
-    base64: 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZNYXz2AAAAAAAAAAAAAAAAAAAAAAD/+9DEAAAGtAFptAAAJTITq/c0wAkAAAANIAAAAAEJGJEIhCEIf/LEIQhCEIT//+UIT/KE85znOc5znOc5znOc+c5znOc5znOc5znOc5znOc5znOc5z3EhYWFhYWFhYWFhYX//uxCEIQhCEIQh/5QhCEIQhD/ygAAADSAMYxjGMYxjGHVdV1XVQAAAAD/+9DEDYPQAAGkAAAAIAAANIAAAAT//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////',
+    src: '/sounds/chime.mp3',
   },
   bell: {
     name: 'Bell',
-    // Gentle bell sound
-    base64: 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZNYXz2AAAAAAAAAAAAAAAAAAAAAAD/+9DEAAAGtANptBAAJUITq/c0wAoAAAANIAAAAAFJOJEIhCEIf/bEIQhCEIT//6UIT/qE85znOc5znOc5znOc+c5znOc5znOc5znOc5znOc5znOc5z3EhYWFhYWFhYWFhYX//uxCEIQhCEIQh/5QhCEIQhD/ygAAADSAMYxjGMYxjGHVdV1XVQAAAAD/+9DEDYPQAAGkAAAAIAAANIAAAAT//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////',
+    src: '/sounds/bell.mp3',
   },
   success: {
     name: 'Success',
-    // Uplifting success sound
-    base64: 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZNYXz2AAAAAAAAAAAAAAAAAAAAAAD/+9DEAAAGtANptBAAJUITq/c0wAoAAAANIAAAAAFpOJEIhCEIf/bEIQhCEIT//6UIT/qE85znOc5znOc5znOc+c5znOc5znOc5znOc5znOc5znOc5z3EhYWFhYWFhYWFhYX//uxCEIQhCEIQh/5QhCEIQhD/ygAAADSAMYxjGMYxjGHVdV1XVQAAAAD/+9DEDYPQAAGkAAAAIAAANIAAAAT//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////',
+    src: '/sounds/success.mp3',
   },
   pop: {
     name: 'Pop',
-    // Quick pop sound
-    base64: 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYZNYXz2AAAAAAAAAAAAAAAAAAAAAAD/+9DEAAAGtAFptAAAJTITq/c0wAkAAAANIAAAAAEJGJEIhCEIf/LEIQhCEIT//+UIT/KE85znOc5znOc5znOc+c5znOc5znOc5znOc5znOc5znOc5z3EhYWFhYWFhYWFhYX//uxCEIQhCEIQh/5QhCEIQhD/ygAAADSAMYxjGMYxjGHVdV1XVQAAAAD/+9DEDYPQAAGkAAAAIAAANIAAAAT//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////',
+    src: '/sounds/pop.mp3',
   },
 } as const;
 
@@ -43,7 +39,7 @@ const STORAGE_KEY = 'notificationSoundSettings';
 export const useNotificationSound = () => {
   const [settings, setSettings] = useState<NotificationSoundSettings>(() => {
     if (typeof window === 'undefined') return DEFAULT_SETTINGS;
-    
+
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
@@ -52,50 +48,62 @@ export const useNotificationSound = () => {
         return DEFAULT_SETTINGS;
       }
     }
+
     return DEFAULT_SETTINGS;
   });
 
+  const playAudio = useCallback((soundType: NotificationSoundType, volume: number) => {
+    const sound = NOTIFICATION_SOUNDS[soundType];
+    const audio = new Audio(sound.src);
+    audio.volume = Math.max(0, Math.min(1, volume));
+    audio.preload = 'auto';
 
+    audio.play().catch((err) => {
+      console.log('Could not play notification sound:', err);
+    });
+  }, []);
 
- const playSound = useCallback((overrideSoundType?: NotificationSoundType) => {
-  if (!settings.enabled) return;
+  const playSound = useCallback(
+    (overrideSoundType?: NotificationSoundType) => {
+      if (!settings.enabled) return;
 
-  const soundType = overrideSoundType || settings.soundType;
-  const sound = NOTIFICATION_SOUNDS[soundType];
-
-  const audio = new Audio(sound.base64);
-  audio.volume = settings.volume;
-  audio.preload = 'auto';
-
-  audio.play().catch((err) => {
-    console.log('Could not play notification sound:', err);
-  });
-}, [settings.enabled, settings.soundType, settings.volume]);
+      const soundType = overrideSoundType || settings.soundType;
+      playAudio(soundType, settings.volume);
+    },
+    [settings.enabled, settings.soundType, settings.volume, playAudio]
+  );
 
   const toggleSound = useCallback(() => {
-    setSettings(prev => ({ ...prev, enabled: !prev.enabled }));
+    setSettings((prev) => {
+      const next = { ...prev, enabled: !prev.enabled };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
   }, []);
 
   const setSoundType = useCallback((soundType: NotificationSoundType) => {
-    setSettings(prev => ({ ...prev, soundType }));
+    setSettings((prev) => {
+      const next = { ...prev, soundType };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
   }, []);
 
   const setVolume = useCallback((volume: number) => {
-    setSettings(prev => ({ ...prev, volume: Math.max(0, Math.min(1, volume)) }));
+    setSettings((prev) => {
+      const next = { ...prev, volume: Math.max(0, Math.min(1, volume)) };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
   }, []);
 
-const testSound = useCallback((overrideSoundType?: NotificationSoundType) => {
-  const soundType = overrideSoundType || settings.soundType;
-  const sound = NOTIFICATION_SOUNDS[soundType];
-
-  const audio = new Audio(sound.base64);
-  audio.volume = settings.volume;
-  audio.preload = 'auto';
-
-  audio.play().catch((err) => {
-    console.log('Could not play test sound:', err);
-  });
-}, [settings.soundType, settings.volume]);
+  const testSound = useCallback(
+    (overrideSoundType?: NotificationSoundType) => {
+      const soundType = overrideSoundType || settings.soundType;
+      playAudio(soundType, settings.volume);
+    },
+    [settings.soundType, settings.volume, playAudio]
+  );
 
   return {
     settings,
