@@ -45,7 +45,39 @@ export const useDocuments = () => {
   const { toast } = useToast();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+const UPLOAD_COOLDOWN_MINUTES = 20;
 
+const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinutes?: number }> => {
+  if (!user) return { allowed: false };
+
+  const { data: lastDoc, error } = await supabase
+    .from('documents')
+    .select('uploaded_at')
+    .eq('user_id', user.id)
+    .order('uploaded_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error checking upload cooldown:', error);
+    return { allowed: false };
+  }
+
+  if (!lastDoc?.uploaded_at) return { allowed: true };
+
+  const lastUpload = new Date(lastDoc.uploaded_at).getTime();
+  const now = Date.now();
+  const diff = (now - lastUpload) / (1000 * 60);
+
+  if (diff < UPLOAD_COOLDOWN_MINUTES) {
+    return {
+      allowed: false,
+      remainingMinutes: Math.ceil(UPLOAD_COOLDOWN_MINUTES - diff),
+    };
+  }
+
+  return { allowed: true };
+};
   const fetchDocuments = async () => {
     if (!user) return;
 
