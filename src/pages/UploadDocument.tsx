@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,14 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useAuth } from '@/contexts/AuthContext';
-import { Upload, FileText, AlertCircle, CheckCircle, Info, ArrowRight, X } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, Info, ArrowRight, X, Clock3, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 
 export default function UploadDocument() {
   const { profile } = useAuth();
-  const { uploadDocuments } = useDocuments();
+  const { uploadDocuments, getLastUploadInfo, uploadCooldownMinutes } = useDocuments();
   const navigate = useNavigate();
+
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -23,30 +24,61 @@ export default function UploadDocument() {
   const [excludeBibliographic, setExcludeBibliographic] = useState(true);
   const [excludeQuoted, setExcludeQuoted] = useState(true);
   const [excludeSmallSources, setExcludeSmallSources] = useState(true);
+
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [cooldownChecked, setCooldownChecked] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   const creditBalance = profile?.credit_balance || 0;
   const hasCredits = creditBalance >= 1;
   const maxFilesAllowed = hasCredits ? 1 : 0;
 
+  const refreshCooldown = async () => {
+    const info = await getLastUploadInfo();
+    setRemainingSeconds(info.remainingSeconds);
+    setCooldownChecked(true);
+  };
+
+  useEffect(() => {
+    refreshCooldown();
+  }, []);
+
+  useEffect(() => {
+    if (!cooldownChecked) return;
+
+    const interval = setInterval(() => {
+      setRemainingSeconds(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldownChecked]);
+
+  const canUploadNow = hasCredits && remainingSeconds === 0;
+  const cooldownProgress = useMemo(() => {
+    const total = uploadCooldownMinutes * 60;
+    const elapsed = total - remainingSeconds;
+    return Math.max(0, Math.min(100, (elapsed / total) * 100));
+  }, [remainingSeconds, uploadCooldownMinutes]);
+
+  const formatRemaining = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+    else if (e.type === 'dragleave') setDragActive(false);
   };
 
   const addFiles = (newFiles: File[]) => {
     setUploadResults(null);
-
     if (!newFiles.length) return;
-
     const firstFile = newFiles[0];
     setSelectedFiles([firstFile]);
-
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -55,7 +87,7 @@ export default function UploadDocument() {
     e.stopPropagation();
     setDragActive(false);
 
-    if (!hasCredits || selectedFiles.length >= maxFilesAllowed) return;
+    if (!canUploadNow || selectedFiles.length >= maxFilesAllowed) return;
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       addFiles(Array.from(e.dataTransfer.files));
@@ -65,7 +97,7 @@ export default function UploadDocument() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
 
-    if (!hasCredits || selectedFiles.length >= maxFilesAllowed) return;
+    if (!canUploadNow || selectedFiles.length >= maxFilesAllowed) return;
 
     if (e.target.files && e.target.files.length > 0) {
       addFiles(Array.from(e.target.files));
@@ -101,6 +133,8 @@ export default function UploadDocument() {
     setUploadResults(results);
     setSelectedFiles([]);
     if (inputRef.current) inputRef.current.value = '';
+
+    await refreshCooldown();
   };
 
   const handleCancel = () => {
@@ -132,6 +166,39 @@ export default function UploadDocument() {
               <Button asChild>
                 <Link to="/dashboard/credits">Buy Credits</Link>
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {hasCredits && cooldownChecked && remainingSeconds > 0 && (
+          <Card className="border-amber-500/30 bg-amber-500/5 shadow-sm">
+            <CardContent className="p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="h-11 w-11 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <Clock3 className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-amber-700 dark:text-amber-400">
+                    Upload cooldown is active
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    You can upload one file every {uploadCooldownMinutes} minutes. Your next upload will be available after the timer ends.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold tabular-nums text-amber-700 dark:text-amber-400">
+                    {formatRemaining(remainingSeconds)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">remaining</div>
+                </div>
+              </div>
+
+              <Progress value={cooldownProgress} />
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <ShieldAlert className="h-4 w-4" />
+                One file only is allowed during each {uploadCooldownMinutes}-minute window.
+              </div>
             </CardContent>
           </Card>
         )}
@@ -222,10 +289,8 @@ export default function UploadDocument() {
 
           <div
             className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-              dragActive
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-primary/50'
-            } ${!hasCredits || selectedFiles.length >= maxFilesAllowed ? 'opacity-50 pointer-events-none' : ''}`}
+              dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+            } ${!canUploadNow || selectedFiles.length >= maxFilesAllowed ? 'opacity-50 pointer-events-none' : ''}`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -238,7 +303,7 @@ export default function UploadDocument() {
               className="hidden"
               accept=".pdf,.doc,.docx,.txt,.xlsx,.pptx,.html,.rtf,.odt"
               onChange={handleChange}
-              disabled={!hasCredits || selectedFiles.length >= maxFilesAllowed}
+              disabled={!canUploadNow || selectedFiles.length >= maxFilesAllowed}
             />
 
             <div className="space-y-3">
@@ -247,7 +312,7 @@ export default function UploadDocument() {
               </div>
               <p className="font-medium">Drag and drop one file here</p>
               <div className="text-sm text-muted-foreground space-y-1">
-                <p>You can upload only <strong className="text-foreground">1 file</strong> every <strong className="text-foreground">20 minutes</strong></p>
+                <p>You can upload only <strong className="text-foreground">1 file</strong> every <strong className="text-foreground">{uploadCooldownMinutes} minutes</strong></p>
                 <p>Each file must be less than <strong className="text-foreground">100 MB</strong></p>
                 <p>Supported file types:</p>
                 <p className="text-amber-600 dark:text-amber-500">.docx, .xlsx, .pptx, .ps, .pdf, .html, .rtf, .odt, .hwp, .txt</p>
@@ -291,7 +356,7 @@ export default function UploadDocument() {
             <Info className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="text-sm text-muted-foreground space-y-1">
               <p>The file you are submitting will not be added to any repository.</p>
-              <p>You can upload one new file every 20 minutes.</p>
+              <p>You can upload one new file every {uploadCooldownMinutes} minutes.</p>
             </div>
           </div>
         </div>
@@ -324,7 +389,7 @@ export default function UploadDocument() {
           </Button>
           <Button
             onClick={handleUpload}
-            disabled={!hasCredits || selectedFiles.length === 0 || uploading}
+            disabled={!canUploadNow || selectedFiles.length === 0 || uploading}
             className="gap-2"
           >
             {uploading ? 'Submitting...' : 'Submit'}
