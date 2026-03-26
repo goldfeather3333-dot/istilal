@@ -39,6 +39,9 @@ import {
 
 export default function MyDocuments() {
   const { documents, loading, downloadFile, deleteDocument, fetchDocuments } = useDocuments();
+  const { getLastUploadInfo, uploadCooldownMinutes } = useDocuments();
+const [remainingSeconds, setRemainingSeconds] = useState(0);
+  
   const { role } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
