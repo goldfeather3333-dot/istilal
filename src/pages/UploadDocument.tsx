@@ -171,7 +171,11 @@ export default function UploadDocument() {
         )}
 
         {hasCredits && cooldownChecked && remainingSeconds > 0 && (
-          <Card className="border-amber-500/30 bg-amber-500/5 shadow-sm">
+  <UploadCooldownCard
+    remainingSeconds={remainingSeconds}
+    cooldownMinutes={uploadCooldownMinutes}
+  />
+)}
             <CardContent className="p-5 space-y-4">
               <div className="flex items-start gap-3">
                 <div className="h-11 w-11 rounded-full bg-amber-500/10 flex items-center justify-center">
