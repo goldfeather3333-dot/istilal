@@ -19,14 +19,15 @@ export default function UploadDocument() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [uploadResults, setUploadResults] = useState<{ success: number; failed: number } | null>(null);
-  
+
   const [excludeBibliographic, setExcludeBibliographic] = useState(true);
   const [excludeQuoted, setExcludeQuoted] = useState(true);
   const [excludeSmallSources, setExcludeSmallSources] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const creditBalance = profile?.credit_balance || 0;
-  const maxFilesAllowed = creditBalance;
+  const hasCredits = creditBalance >= 1;
+  const maxFilesAllowed = hasCredits ? 1 : 0;
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -38,10 +39,24 @@ export default function UploadDocument() {
     }
   };
 
+  const addFiles = (newFiles: File[]) => {
+    setUploadResults(null);
+
+    if (!newFiles.length) return;
+
+    const firstFile = newFiles[0];
+    setSelectedFiles([firstFile]);
+
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
+
+    if (!hasCredits || selectedFiles.length >= maxFilesAllowed) return;
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       addFiles(Array.from(e.dataTransfer.files));
     }
@@ -49,27 +64,12 @@ export default function UploadDocument() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
+
+    if (!hasCredits || selectedFiles.length >= maxFilesAllowed) return;
+
     if (e.target.files && e.target.files.length > 0) {
       addFiles(Array.from(e.target.files));
     }
-  };
-
-  const addFiles = (newFiles: File[]) => {
-    setUploadResults(null);
-
-    setSelectedFiles((prev) => {
-      // Avoid accidentally re-adding the same file multiple times
-      const existingKeys = new Set(prev.map((f) => `${f.name}::${f.size}::${f.lastModified}`));
-      const deduped = newFiles.filter((f) => !existingKeys.has(`${f.name}::${f.size}::${f.lastModified}`));
-
-      const maxAllowed = Math.max(0, maxFilesAllowed);
-      const availableSlots = Math.max(0, maxAllowed - prev.length);
-      const filesToAdd = deduped.slice(0, availableSlots);
-      return [...prev, ...filesToAdd];
-    });
-
-    // Ensure the file input doesn't keep an old FileList around
-    if (inputRef.current) inputRef.current.value = '';
   };
 
   const removeFile = (index: number) => {
@@ -82,13 +82,12 @@ export default function UploadDocument() {
     setUploading(true);
     setUploadProgress({ current: 0, total: selectedFiles.length });
 
-    // Pass exclusion options to the upload function
     const results = await uploadDocuments(
       selectedFiles,
       (current, total) => {
         setUploadProgress({ current, total });
       },
-      { 
+      {
         uploadType: 'single',
         exclusions: {
           exclude_bibliographic: excludeBibliographic,
@@ -110,8 +109,6 @@ export default function UploadDocument() {
     navigate('/dashboard/documents');
   };
 
-  const hasCredits = creditBalance >= 1;
-
   return (
     <DashboardLayout>
       <div className="max-w-2xl mx-auto space-y-6">
@@ -122,7 +119,6 @@ export default function UploadDocument() {
           </p>
         </div>
 
-        {/* Credit Check */}
         {!hasCredits && (
           <Card className="border-destructive bg-destructive/5">
             <CardContent className="p-4 flex items-center gap-3">
@@ -140,7 +136,6 @@ export default function UploadDocument() {
           </Card>
         )}
 
-        {/* Upload Results */}
         {uploadResults && (
           <Card className="border-secondary bg-secondary/5">
             <CardContent className="p-4 flex items-center gap-3">
@@ -151,7 +146,7 @@ export default function UploadDocument() {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {uploadResults.failed > 0 && `${uploadResults.failed} failed. `}
-                  Your documents are now in the queue and will be processed soon.
+                  Your document is now in the queue and will be processed soon.
                 </p>
               </div>
               <Button variant="outline" asChild>
@@ -161,12 +156,11 @@ export default function UploadDocument() {
           </Card>
         )}
 
-        {/* Upload Progress */}
         {uploading && (
           <Card>
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="font-medium">Uploading documents...</p>
+                <p className="font-medium">Uploading document...</p>
                 <p className="text-sm text-muted-foreground">
                   {uploadProgress.current} / {uploadProgress.total}
                 </p>
@@ -176,11 +170,9 @@ export default function UploadDocument() {
           </Card>
         )}
 
-
-        {/* Options (exclusion) */}
         <div className="space-y-4">
           <Label className="text-base">Options ( exclusion )</Label>
-          
+
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label htmlFor="exclude-bibliographic" className="font-normal cursor-pointer">
@@ -193,7 +185,7 @@ export default function UploadDocument() {
                 disabled={!hasCredits}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <Label htmlFor="exclude-quoted" className="font-normal cursor-pointer">
                 Exclude quoted materials
@@ -205,7 +197,7 @@ export default function UploadDocument() {
                 disabled={!hasCredits}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <Label htmlFor="exclude-small" className="font-normal cursor-pointer">
                 Exclude sources that are less than 1%
@@ -220,14 +212,14 @@ export default function UploadDocument() {
           </div>
         </div>
 
-        {/* Document Upload Area */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-base">Documents</Label>
             <span className="text-sm text-muted-foreground">
-              {selectedFiles.length} / {maxFilesAllowed} files selected
+              {selectedFiles.length} / {maxFilesAllowed} file selected
             </span>
           </div>
+
           <div
             className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
               dragActive
@@ -247,16 +239,15 @@ export default function UploadDocument() {
               accept=".pdf,.doc,.docx,.txt,.xlsx,.pptx,.html,.rtf,.odt"
               onChange={handleChange}
               disabled={!hasCredits || selectedFiles.length >= maxFilesAllowed}
-              multiple
             />
-            
+
             <div className="space-y-3">
               <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mx-auto">
                 <Upload className="h-6 w-6 text-muted-foreground" />
               </div>
-              <p className="font-medium">Drag and drop files here</p>
+              <p className="font-medium">Drag and drop one file here</p>
               <div className="text-sm text-muted-foreground space-y-1">
-                <p>You can upload up to <strong className="text-foreground">{maxFilesAllowed} files</strong> based on your credits</p>
+                <p>You can upload only <strong className="text-foreground">1 file</strong> every <strong className="text-foreground">20 minutes</strong></p>
                 <p>Each file must be less than <strong className="text-foreground">100 MB</strong></p>
                 <p>Supported file types:</p>
                 <p className="text-amber-600 dark:text-amber-500">.docx, .xlsx, .pptx, .ps, .pdf, .html, .rtf, .odt, .hwp, .txt</p>
@@ -264,10 +255,9 @@ export default function UploadDocument() {
             </div>
           </div>
 
-          {/* Selected Files List */}
           {selectedFiles.length > 0 && (
             <div className="space-y-2 mt-4">
-              <Label className="text-sm">Selected Files ({selectedFiles.length})</Label>
+              <Label className="text-sm">Selected File ({selectedFiles.length})</Label>
               <div className="max-h-48 overflow-y-auto space-y-2">
                 {selectedFiles.map((file, index) => (
                   <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted">
@@ -296,17 +286,16 @@ export default function UploadDocument() {
           )}
         </div>
 
-        {/* Notices */}
         <div className="space-y-3">
           <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border">
             <Info className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              The file you are submitting will not be added to any repository.
-            </p>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>The file you are submitting will not be added to any repository.</p>
+              <p>You can upload one new file every 20 minutes.</p>
+            </div>
           </div>
         </div>
 
-        {/* Credit Info */}
         <div className="p-4 rounded-lg bg-muted/50">
           <div className="flex items-center justify-between">
             <div>
@@ -315,29 +304,30 @@ export default function UploadDocument() {
             </div>
             <p className="text-xl font-bold">1 Credit</p>
           </div>
+
           <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
             <p className="text-sm">Your balance</p>
             <p className="font-semibold">{creditBalance} Credits</p>
           </div>
+
           {selectedFiles.length > 0 && (
             <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
               <p className="text-sm">Total cost</p>
-              <p className="font-semibold text-primary">{selectedFiles.length} Credit{selectedFiles.length !== 1 ? 's' : ''}</p>
+              <p className="font-semibold text-primary">1 Credit</p>
             </div>
           )}
         </div>
 
-        {/* Action Buttons */}
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={handleCancel} disabled={uploading}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleUpload} 
+          <Button
+            onClick={handleUpload}
             disabled={!hasCredits || selectedFiles.length === 0 || uploading}
             className="gap-2"
           >
-            {uploading ? 'Submitting...' : `Submit ${selectedFiles.length > 0 ? `(${selectedFiles.length})` : ''}`}
+            {uploading ? 'Submitting...' : 'Submit'}
             {!uploading && <ArrowRight className="h-4 w-4" />}
           </Button>
         </div>
