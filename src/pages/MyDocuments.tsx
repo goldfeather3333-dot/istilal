@@ -11,6 +11,8 @@ import { DocumentTagManager } from '@/components/DocumentTagManager';
 import { FileText, Download, Loader2, Star, StarOff, DownloadCloud, Package, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { UploadCooldownCard } from '@/components/UploadCooldownCard';
+import { useEffect } from 'react';
 
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
