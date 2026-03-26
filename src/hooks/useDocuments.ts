@@ -45,39 +45,73 @@ export const useDocuments = () => {
   const { toast } = useToast();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
-const UPLOAD_COOLDOWN_MINUTES = 20;
 
-const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinutes?: number }> => {
-  if (!user) return { allowed: false };
+  const UPLOAD_COOLDOWN_MINUTES = 20;
 
-  const { data: lastDoc, error } = await supabase
-    .from('documents')
-    .select('uploaded_at')
-    .eq('user_id', user.id)
-    .order('uploaded_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const getLastUploadInfo = async (): Promise<{
+    lastUploadedAt: string | null;
+    allowed: boolean;
+    remainingMinutes: number;
+    remainingSeconds: number;
+  }> => {
+    if (!user) {
+      return {
+        lastUploadedAt: null,
+        allowed: false,
+        remainingMinutes: UPLOAD_COOLDOWN_MINUTES,
+        remainingSeconds: UPLOAD_COOLDOWN_MINUTES * 60,
+      };
+    }
 
-  if (error) {
-    console.error('Error checking upload cooldown:', error);
-    return { allowed: false };
-  }
+    const { data: lastDoc, error } = await supabase
+      .from('documents')
+      .select('uploaded_at')
+      .eq('user_id', user.id)
+      .order('uploaded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  if (!lastDoc?.uploaded_at) return { allowed: true };
+    if (error) {
+      console.error('Error checking upload cooldown:', error);
+      return {
+        lastUploadedAt: null,
+        allowed: false,
+        remainingMinutes: UPLOAD_COOLDOWN_MINUTES,
+        remainingSeconds: UPLOAD_COOLDOWN_MINUTES * 60,
+      };
+    }
 
-  const lastUpload = new Date(lastDoc.uploaded_at).getTime();
-  const now = Date.now();
-  const diff = (now - lastUpload) / (1000 * 60);
+    if (!lastDoc?.uploaded_at) {
+      return {
+        lastUploadedAt: null,
+        allowed: true,
+        remainingMinutes: 0,
+        remainingSeconds: 0,
+      };
+    }
 
-  if (diff < UPLOAD_COOLDOWN_MINUTES) {
+    const lastUploadMs = new Date(lastDoc.uploaded_at).getTime();
+    const nowMs = Date.now();
+    const cooldownMs = UPLOAD_COOLDOWN_MINUTES * 60 * 1000;
+    const diffMs = nowMs - lastUploadMs;
+    const remainingMs = Math.max(0, cooldownMs - diffMs);
+
     return {
-      allowed: false,
-      remainingMinutes: Math.ceil(UPLOAD_COOLDOWN_MINUTES - diff),
+      lastUploadedAt: lastDoc.uploaded_at,
+      allowed: remainingMs === 0,
+      remainingMinutes: Math.ceil(remainingMs / (1000 * 60)),
+      remainingSeconds: Math.ceil(remainingMs / 1000),
     };
-  }
+  };
 
-  return { allowed: true };
-};
+  const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinutes?: number }> => {
+    const info = await getLastUploadInfo();
+    return {
+      allowed: info.allowed,
+      remainingMinutes: info.remainingMinutes,
+    };
+  };
+
   const fetchDocuments = async () => {
     if (!user) return;
 
@@ -93,16 +127,15 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
 
       if (error) throw error;
 
-      // Fetch staff profiles for assigned documents
       const staffIds = [...new Set((data || []).filter(d => d.assigned_staff_id).map(d => d.assigned_staff_id))];
       let staffProfiles: Record<string, { email: string; full_name: string | null }> = {};
-      
+
       if (staffIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, email, full_name')
           .in('id', staffIds);
-        
+
         if (profiles) {
           staffProfiles = profiles.reduce((acc, p) => {
             acc[p.id] = { email: p.email, full_name: p.full_name };
@@ -111,16 +144,15 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         }
       }
 
-      // Fetch customer profiles (document owners) - filter out null user_ids
       const customerIds = [...new Set((data || []).filter(d => d.user_id).map(d => d.user_id as string))];
       let customerProfiles: Record<string, { email: string; full_name: string | null }> = {};
-      
+
       if (customerIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, email, full_name')
           .in('id', customerIds);
-        
+
         if (profiles) {
           customerProfiles = profiles.reduce((acc, p) => {
             acc[p.id] = { email: p.email, full_name: p.full_name };
@@ -152,10 +184,10 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
     try {
       const { error } = await supabase
         .from('documents')
-        .update({ 
-          status: 'pending', 
-          assigned_staff_id: null, 
-          assigned_at: null 
+        .update({
+          status: 'pending',
+          assigned_staff_id: null,
+          assigned_at: null
         })
         .eq('id', documentId);
 
@@ -185,8 +217,15 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
       return { success: false };
     };
 
+    const cooldown = await checkUploadCooldown();
+    if (!cooldown.allowed) {
+      return fail(
+        'Upload blocked',
+        `You can upload only one file every ${UPLOAD_COOLDOWN_MINUTES} minutes. Please wait ${cooldown.remainingMinutes} minute(s).`
+      );
+    }
+
     try {
-      // Always fetch fresh balance from backend (do NOT depend on client profile state)
       const { data: freshProfile, error: profileError } = await supabase
         .from('profiles')
         .select('credit_balance')
@@ -212,20 +251,16 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
       const fileName = `${Date.now()}.${safeExt}`;
       const filePath = `${user.id}/${fileName}`;
 
-      // 1) Upload file to storage
       const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
       if (uploadError) {
         return fail('Upload failed', `Storage upload failed: ${uploadError.message}`, uploadError);
       }
 
-      // Extract original_file_name in format "fileA (X)" and check if PDF
       const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
       const isPdfOriginal = fileExtension === 'pdf';
       const fileNameWithoutExt = file.name.replace(/\.[^.]+$/, '');
-      // Keep the format as "fileA (X)" - base name with bracket number
       const originalFileName = fileNameWithoutExt.trim();
 
-      // 2) Create document record with original_file_name and is_pdf_original
       const { data: docData, error: insertError } = await supabase
         .from('documents')
         .insert({
@@ -240,23 +275,20 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         .single();
 
       if (insertError || !docData) {
-        // Cleanup storage if DB insert fails
         await supabase.storage.from('documents').remove([filePath]);
         return fail('Upload failed', `Could not create document record: ${insertError?.message ?? 'Unknown error'}`, insertError);
       }
 
-      // 3) Deduct credit AFTER successful upload + insert
       const newBalance = currentBalance - 1;
       const { data: updateData, error: updateError } = await supabase
         .from('profiles')
         .update({ credit_balance: newBalance })
         .eq('id', user.id)
-        .eq('credit_balance', currentBalance) // optimistic lock
+        .eq('credit_balance', currentBalance)
         .select('credit_balance')
         .maybeSingle();
 
       if (updateError || !updateData) {
-        // Roll back the document + storage if we couldn't deduct credits safely
         await supabase.from('documents').delete().eq('id', docData.id);
         await supabase.storage.from('documents').remove([filePath]);
         return fail('Upload failed', 'Could not deduct credits (balance changed). Please try again.', updateError);
@@ -273,7 +305,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
       });
 
       if (txError) {
-        // Log internally but don't alarm user - upload was successful
         console.error('Credit transaction logging failed (non-critical):', txError);
       }
 
@@ -282,7 +313,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
       await refreshProfile();
       await fetchDocuments();
 
-      // Trigger push notifications to staff/admin (non-critical)
       try {
         await supabase.functions.invoke('notify-document-upload');
       } catch (err) {
@@ -298,7 +328,7 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
   const uploadDocuments = async (
     files: File[],
     onProgress?: (current: number, total: number) => void,
-    options?: { 
+    options?: {
       uploadType?: 'single' | 'bulk';
       exclusions?: {
         exclude_bibliographic?: boolean;
@@ -317,7 +347,23 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
       toast({ title, description, variant: 'destructive' });
     };
 
-    // Validate credits up-front: requiredCredits = number of files
+    if (files.length > 1) {
+      failToast(
+        'Upload blocked',
+        `You can upload only one file every ${UPLOAD_COOLDOWN_MINUTES} minutes.`
+      );
+      return { success: 0, failed: files.length };
+    }
+
+    const cooldown = await checkUploadCooldown();
+    if (!cooldown.allowed) {
+      failToast(
+        'Upload blocked',
+        `You can upload only one file every ${UPLOAD_COOLDOWN_MINUTES} minutes. Please wait ${cooldown.remainingMinutes} minute(s).`
+      );
+      return { success: 0, failed: files.length };
+    }
+
     const { data: freshProfile, error: profileError } = await supabase
       .from('profiles')
       .select('credit_balance')
@@ -350,7 +396,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
       onProgress?.(i + 1, files.length);
 
       try {
-        // Fetch current balance fresh per-file (race-safe)
         const { data: currentProfile, error: balanceError } = await supabase
           .from('profiles')
           .select('credit_balance')
@@ -372,18 +417,14 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         const fileName = `${Date.now()}_${i}.${safeExt}`;
         const filePath = `${user.id}/${fileName}`;
 
-        // 1) Upload to storage
         const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
         if (uploadError) throw uploadError;
 
-        // Extract original_file_name in format "fileA (X)" and check if PDF
         const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
         const isPdfOriginal = fileExtension === 'pdf';
         const fileNameWithoutExt = file.name.replace(/\.[^.]+$/, '');
-        // Keep the format as "fileA (X)" - base name with bracket number
         const originalFileName = fileNameWithoutExt.trim();
 
-        // 2) Create document record with original_file_name, is_pdf_original, and exclusion options
         const { data: docData, error: insertError } = await supabase
           .from('documents')
           .insert({
@@ -405,7 +446,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
           throw insertError ?? new Error('Failed to create document record');
         }
 
-        // 3) Deduct credit AFTER successful upload + insert
         const newBalance = currentBalance - 1;
         const { data: updateData, error: updateError } = await supabase
           .from('profiles')
@@ -416,7 +456,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
           .maybeSingle();
 
         if (updateError || !updateData) {
-          // Roll back this file if we couldn't deduct credits safely
           await supabase.from('documents').delete().eq('id', docData.id);
           await supabase.storage.from('documents').remove([filePath]);
           throw updateError ?? new Error('Credit deduction failed');
@@ -433,7 +472,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         });
 
         if (txError) {
-          // Log internally but don't alarm user - upload was successful
           console.error('Credit transaction logging failed (non-critical):', txError);
         }
 
@@ -473,7 +511,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
 
   const downloadFile = async (path: string, bucket: string = 'documents', originalFileName?: string) => {
     try {
-      // Auto-detect bucket for guest/magic-link uploads
       const effectiveBucket = bucket === 'documents' && path.startsWith('magic/') ? 'magic-uploads' : bucket;
 
       const { data, error } = await supabase.storage
@@ -485,7 +522,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
       const fileName = originalFileName || path.split('/').pop() || 'download';
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-      // iOS Safari often ignores forced downloads (download attribute) — best-effort is to open the signed URL.
       if (isIOS) {
         window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
         toast({
@@ -495,7 +531,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         return;
       }
 
-      // Chrome/desktop: Fetch as blob and force a real download
       const response = await fetch(data.signedUrl);
       if (!response.ok) throw new Error(`Failed to fetch file (${response.status})`);
 
@@ -542,11 +577,10 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
     fileName?: string
   ) => {
     try {
-      // Staff AND Admin must upload both reports to complete a document
       if (status === 'completed' && (role === 'staff' || role === 'admin')) {
         const hasSimReport = updates?.similarity_report_path;
         const hasAiReport = updates?.ai_report_path;
-        
+
         if (!hasSimReport || !hasAiReport) {
           toast({
             title: 'Reports Required',
@@ -558,12 +592,12 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
       }
 
       const updateData: Record<string, unknown> = { status, ...updates };
-      
+
       if (status === 'in_progress' && user) {
         updateData.assigned_staff_id = user.id;
         updateData.assigned_at = new Date().toISOString();
       }
-      
+
       if (status === 'completed') {
         updateData.completed_at = new Date().toISOString();
       }
@@ -575,7 +609,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
 
       if (error) throw error;
 
-      // Log activity
       if (user) {
         await supabase.from('activity_logs').insert({
           staff_id: user.id,
@@ -584,9 +617,7 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         });
       }
 
-      // Create personal notification for the document owner when completed
       if (status === 'completed' && documentUserId && fileName) {
-        // Create in-app notification
         try {
           const { error: notifError } = await supabase.from('user_notifications').insert({
             user_id: documentUserId,
@@ -594,7 +625,7 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
             message: `Your document "${fileName}" has been processed. View your results in My Documents.`,
             created_by: user?.id,
           });
-          
+
           if (notifError) {
             console.error('Error creating notification:', notifError);
           } else {
@@ -604,7 +635,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
           console.error('Exception creating notification:', notifError);
         }
 
-        // Send completion email
         try {
           console.log('Sending completion email for document:', documentId);
           const { error: emailError } = await supabase.functions.invoke('send-completion-email', {
@@ -616,7 +646,7 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
               aiPercentage: updates?.ai_percentage ?? 0,
             },
           });
-          
+
           if (emailError) {
             console.error('Error sending completion email:', emailError);
           } else {
@@ -626,7 +656,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
           console.error('Exception sending completion email:', emailError);
         }
 
-        // Send push notification
         try {
           console.log('Sending push notification for document:', documentId);
           const { error: pushError } = await supabase.functions.invoke('send-push-notification', {
@@ -641,7 +670,7 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
               },
             },
           });
-          
+
           if (pushError) {
             console.error('Error sending push notification:', pushError);
           } else {
@@ -668,18 +697,17 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
     }
   };
 
- const uploadReport = async (
-  documentId: string,
-  document: Document,
-  similarityReport: File | null,
-  aiReport: File | null,
-  similarityPercentage: number,
-  aiPercentage: number | null,
-  remarks?: string | null
-) => {
+  const uploadReport = async (
+    documentId: string,
+    document: Document,
+    similarityReport: File | null,
+    aiReport: File | null,
+    similarityPercentage: number,
+    aiPercentage: number | null,
+    remarks?: string | null
+  ) => {
     if (!user) return;
 
-    // Staff AND Admin MUST upload both reports to complete a document
     if (role === 'staff' || role === 'admin') {
       if (!similarityReport || !aiReport) {
         toast({
@@ -698,10 +726,8 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         remarks: remarks || null,
       };
 
-      // Determine folder path - use user_id for regular users, 'guest' folder for magic link uploads
       const folderPath = document.user_id || 'guest';
 
-      // Upload similarity report
       if (similarityReport) {
         const simPath = `${folderPath}/${documentId}_similarity.pdf`;
         const { error: simError } = await supabase.storage
@@ -712,7 +738,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         updates.similarity_report_path = simPath;
       }
 
-      // Upload AI report
       if (aiReport) {
         const aiPath = `${folderPath}/${documentId}_ai.pdf`;
         const { error: aiError } = await supabase.storage
@@ -734,11 +759,9 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
     }
   };
 
-  // Delete document and all associated files (customer can only delete their own completed documents)
   const deleteDocument = async (documentId: string, document: Document): Promise<boolean> => {
     if (!user) return false;
 
-    // Only allow deletion of completed documents
     if (document.status !== 'completed') {
       toast({
         title: 'Cannot Delete',
@@ -748,7 +771,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
       return false;
     }
 
-    // Customer can only delete their own documents
     if (role === 'customer' && document.user_id !== user.id) {
       toast({
         title: 'Unauthorized',
@@ -759,7 +781,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
     }
 
     try {
-      // 1. Delete original document from storage
       if (document.file_path) {
         const { error: docStorageError } = await supabase.storage
           .from('documents')
@@ -769,7 +790,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         }
       }
 
-      // 2. Delete similarity report from storage
       if (document.similarity_report_path) {
         const { error: simStorageError } = await supabase.storage
           .from('reports')
@@ -779,7 +799,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         }
       }
 
-      // 3. Delete AI report from storage
       if (document.ai_report_path) {
         const { error: aiStorageError } = await supabase.storage
           .from('reports')
@@ -789,19 +808,16 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
         }
       }
 
-      // 4. Delete document tag assignments
       await supabase
         .from('document_tag_assignments')
         .delete()
         .eq('document_id', documentId);
 
-      // 5. Delete activity logs for this document
       await supabase
         .from('activity_logs')
         .delete()
         .eq('document_id', documentId);
 
-      // 6. Delete the document record itself
       const { error: deleteError } = await supabase
         .from('documents')
         .delete()
@@ -831,7 +847,6 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
     fetchDocuments();
   }, [user, role]);
 
-  // Real-time subscription
   useEffect(() => {
     if (!user) return;
 
@@ -866,5 +881,7 @@ const checkUploadCooldown = async (): Promise<{ allowed: boolean; remainingMinut
     fetchDocuments,
     releaseDocument,
     deleteDocument,
+    getLastUploadInfo,
+    uploadCooldownMinutes: UPLOAD_COOLDOWN_MINUTES,
   };
 };
