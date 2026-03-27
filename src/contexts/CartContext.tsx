@@ -34,27 +34,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
 
+  // ✅ باقة واحدة فقط في السلة
   const addToCart = (plan: PricingPackage) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.package.id === plan.id);
-      if (existing) {
-        return prev.map(item => 
-          item.package.id === plan.id 
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prev, { package: plan, quantity: 1 }];
-    });
+    setCart([{ package: plan, quantity: 1 }]);
   };
 
+  // ✅ لم يعد هناك تعديل كمية، نتركها فقط للتوافق مع الكود القديم
   const updateCartQuantity = (packageId: string, delta: number) => {
     setCart(prev => {
       return prev.map(item => {
         if (item.package.id === packageId) {
           const newQuantity = item.quantity + delta;
           if (newQuantity <= 0) return null;
-          return { ...item, quantity: newQuantity };
+          return { ...item, quantity: 1 };
         }
         return item;
       }).filter(Boolean) as CartItem[];
@@ -70,28 +62,30 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const getCartTotal = () => {
-    return cart.reduce((sum, item) => sum + (item.package.price * item.quantity), 0);
+    return cart.reduce((sum, item) => sum + item.package.price, 0);
   };
 
   const getCartCredits = () => {
-    return cart.reduce((sum, item) => sum + (item.package.credits * item.quantity), 0);
+    return cart.reduce((sum, item) => sum + item.package.credits, 0);
   };
 
   const getCartCount = () => {
-    return cart.reduce((sum, item) => sum + item.quantity, 0);
+    return cart.length;
   };
 
   return (
-    <CartContext.Provider value={{
-      cart,
-      addToCart,
-      updateCartQuantity,
-      removeFromCart,
-      clearCart,
-      getCartTotal,
-      getCartCredits,
-      getCartCount,
-    }}>
+    <CartContext.Provider
+      value={{
+        cart,
+        addToCart,
+        updateCartQuantity,
+        removeFromCart,
+        clearCart,
+        getCartTotal,
+        getCartCredits,
+        getCartCount,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
