@@ -8,9 +8,9 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  ArrowLeft, CreditCard, Loader2, Bitcoin, Copy, ExternalLink, 
-  RefreshCw, Wallet, ShoppingCart, Plus, Minus, Trash2, Globe, 
+import {
+  ArrowLeft, CreditCard, Loader2, Bitcoin, Copy, ExternalLink,
+  RefreshCw, Wallet, ShoppingCart, Trash2, Globe,
   CheckCircle, MessageCircle, AlertCircle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
